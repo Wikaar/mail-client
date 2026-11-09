@@ -23,8 +23,8 @@ import com.mailtabs.app.data.mail.MailParser
 import com.mailtabs.app.data.mail.MailSessions
 import com.mailtabs.app.push.Notifier
 import com.mailtabs.app.work.WorkScheduler
-import com.sun.mail.imap.IMAPFolder
-import com.sun.mail.imap.IMAPStore
+import org.eclipse.angus.mail.imap.IMAPFolder
+import org.eclipse.angus.mail.imap.IMAPStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.activation.DataHandler
 import jakarta.mail.AuthenticationFailedException

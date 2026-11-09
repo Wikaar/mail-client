@@ -2,7 +2,7 @@ package com.mailtabs.app.data.mail
 
 import com.mailtabs.app.data.db.AccountEntity
 import com.mailtabs.app.data.db.Security
-import com.sun.mail.imap.IMAPStore
+import org.eclipse.angus.mail.imap.IMAPStore
 import jakarta.mail.Session
 import jakarta.mail.Transport
 import java.util.Properties

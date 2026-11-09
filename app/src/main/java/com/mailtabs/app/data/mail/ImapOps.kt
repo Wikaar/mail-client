@@ -3,8 +3,8 @@ package com.mailtabs.app.data.mail
 import com.mailtabs.app.data.db.ActionType
 import com.mailtabs.app.data.db.FolderRole
 import com.mailtabs.app.data.db.PendingActionEntity
-import com.sun.mail.imap.IMAPFolder
-import com.sun.mail.imap.IMAPStore
+import org.eclipse.angus.mail.imap.IMAPFolder
+import org.eclipse.angus.mail.imap.IMAPStore
 import jakarta.mail.Flags
 import jakarta.mail.Folder
 import jakarta.mail.FolderNotFoundException

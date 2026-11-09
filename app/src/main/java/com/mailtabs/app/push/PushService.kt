@@ -14,7 +14,7 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.mailtabs.app.data.MailRepository
 import com.mailtabs.app.data.db.AccountEntity
-import com.sun.mail.imap.IMAPFolder
+import org.eclipse.angus.mail.imap.IMAPFolder
 import dagger.hilt.android.AndroidEntryPoint
 import jakarta.mail.Folder
 import jakarta.mail.event.MessageCountAdapter
