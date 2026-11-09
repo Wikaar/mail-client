@@ -1,0 +1,5 @@
+-keep class com.sun.mail.** { *; }
+-keep class jakarta.mail.** { *; }
+-keep class jakarta.activation.** { *; }
+-dontwarn java.awt.**
+-dontwarn javax.security.**
