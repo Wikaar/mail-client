@@ -1,4 +1,4 @@
-# MailTabs
+# WikarM@il
 
 Почтовый клиент для Android: каждый ящик — отдельная вкладка, письма разных ящиков никогда не смешиваются.
 
@@ -34,4 +34,6 @@
 ./gradlew assembleDebug
 ```
 
-GitHub Actions собирает debug APK на каждый push и выкладывает его как artifact `mailtabs-debug-apk`.
+GitHub Actions собирает debug APK на каждый push и выкладывает его как artifact `wikarmail-debug-apk`.
+
+Автор: Wikar

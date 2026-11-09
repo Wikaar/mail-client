@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "MailTabs"
+rootProject.name = "WikarMail"
 include(":app")
