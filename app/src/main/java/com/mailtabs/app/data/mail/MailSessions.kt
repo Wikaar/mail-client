@@ -2,9 +2,9 @@ package com.mailtabs.app.data.mail
 
 import com.mailtabs.app.data.db.AccountEntity
 import com.mailtabs.app.data.db.Security
-import org.eclipse.angus.mail.imap.IMAPStore
-import jakarta.mail.Session
-import jakarta.mail.Transport
+import com.sun.mail.imap.IMAPStore
+import javax.mail.Session
+import javax.mail.Transport
 import java.util.Properties
 
 object MailSessions {

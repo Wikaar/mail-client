@@ -2,7 +2,7 @@
 
 Почтовый клиент для Android: каждый ящик — отдельная вкладка, письма разных ящиков никогда не смешиваются.
 
-Стек: Kotlin, Jetpack Compose, Material 3, Room, Jakarta Mail (IMAP/SMTP), Hilt, WorkManager. minSdk 26. Без рекламы и аналитики.
+Стек: Kotlin, Jetpack Compose, Material 3, Room, JavaMail for Android 1.6.7 (javax.mail, IMAP/SMTP), Hilt, WorkManager. minSdk 26. Без рекламы и аналитики.
 
 ## Что уже есть (этап 1)
 

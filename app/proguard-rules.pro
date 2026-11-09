@@ -1,5 +1,5 @@
--keep class org.eclipse.angus.** { *; }
--keep class jakarta.mail.** { *; }
--keep class jakarta.activation.** { *; }
+-keep class com.sun.mail.** { *; }
+-keep class javax.mail.** { *; }
+-keep class javax.activation.** { *; }
 -dontwarn java.awt.**
 -dontwarn javax.security.**

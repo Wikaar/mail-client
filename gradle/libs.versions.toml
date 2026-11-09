@@ -11,10 +11,7 @@ composeBom = "2025.04.01"
 navigation = "2.8.9"
 room = "2.7.1"
 work = "2.10.1"
-angusMail = "2.0.3"
-angusActivation = "2.0.2"
-jakartaMailApi = "2.1.3"
-jakartaActivationApi = "2.1.3"
+androidMail = "1.6.7"
 coroutines = "1.10.2"
 
 [libraries]
@@ -41,10 +38,8 @@ hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", v
 androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "androidxHilt" }
 androidx-hilt-work = { group = "androidx.hilt", name = "hilt-work", version.ref = "androidxHilt" }
 androidx-hilt-compiler = { group = "androidx.hilt", name = "hilt-compiler", version.ref = "androidxHilt" }
-angus-mail = { group = "org.eclipse.angus", name = "angus-mail", version.ref = "angusMail" }
-angus-activation = { group = "org.eclipse.angus", name = "angus-activation", version.ref = "angusActivation" }
-jakarta-mail-api = { group = "jakarta.mail", name = "jakarta.mail-api", version.ref = "jakartaMailApi" }
-jakarta-activation-api = { group = "jakarta.activation", name = "jakarta.activation-api", version.ref = "jakartaActivationApi" }
+android-mail = { group = "com.sun.mail", name = "android-mail", version.ref = "androidMail" }
+android-activation = { group = "com.sun.mail", name = "android-activation", version.ref = "androidMail" }
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 
 [plugins]

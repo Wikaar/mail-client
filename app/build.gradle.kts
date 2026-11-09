@@ -75,9 +75,7 @@ dependencies {
     implementation(libs.androidx.hilt.work)
     ksp(libs.androidx.hilt.compiler)
 
-    implementation(libs.jakarta.mail.api)
-    implementation(libs.angus.mail)
-    implementation(libs.jakarta.activation.api)
-    implementation(libs.angus.activation)
+    implementation(libs.android.mail)
+    implementation(libs.android.activation)
     implementation(libs.kotlinx.coroutines.android)
 }

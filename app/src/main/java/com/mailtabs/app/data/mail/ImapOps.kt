@@ -3,12 +3,12 @@ package com.mailtabs.app.data.mail
 import com.mailtabs.app.data.db.ActionType
 import com.mailtabs.app.data.db.FolderRole
 import com.mailtabs.app.data.db.PendingActionEntity
-import org.eclipse.angus.mail.imap.IMAPFolder
-import org.eclipse.angus.mail.imap.IMAPStore
-import jakarta.mail.Flags
-import jakarta.mail.Folder
-import jakarta.mail.FolderNotFoundException
-import jakarta.mail.Message
+import com.sun.mail.imap.IMAPFolder
+import com.sun.mail.imap.IMAPStore
+import javax.mail.Flags
+import javax.mail.Folder
+import javax.mail.FolderNotFoundException
+import javax.mail.Message
 
 /** Синхронные (блокирующие) операции над IMAP. Вызывать только из IO-потока. */
 object ImapOps {
