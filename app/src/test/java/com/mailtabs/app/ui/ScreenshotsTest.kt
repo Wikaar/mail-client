@@ -77,7 +77,7 @@ import java.time.ZoneId
 
 /**
  * Скриншоты экранов WikarM@il на демо-данных (без сети и реальных ящиков).
- * Запуск: ./gradlew recordRoborazziDebug → app/build/outputs/roborazzi/*.png
+ * Запуск: ./gradlew recordRoborazziDebug → PNG в app/build/outputs/roborazzi
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
