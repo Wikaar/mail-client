@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Bundle
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -66,13 +67,17 @@ class Notifier @Inject constructor(
             .setContentIntent(openIntent(null, null))
             .build()
 
+    /**
+     * Уведомление на каждое новое письмо (кнопки «Прочитано» и «Удалить», тап открывает письмо)
+     * плюс summary группы ящика с кнопкой «Прочитать все».
+     */
     fun notifyNew(account: AccountEntity, messages: List<MessageEntity>) {
         if (messages.isEmpty() || !settings.cached.notifyFor(account.id)) return
         if (!canPost()) return
         val nm = NotificationManagerCompat.from(ctx)
         val group = group(account.id)
         try {
-            for (m in messages.sortedBy { it.date }.takeLast(5)) {
+            for (m in messages.filter { it.id > 0 }.sortedBy { it.date }.takeLast(MAX_PER_SYNC)) {
                 val sender = m.fromName.ifBlank { m.fromAddress }
                 val subject = m.subject.ifBlank { strings.get(R.string.no_subject) }
                 val n = NotificationCompat.Builder(ctx, CH_MAIL)
@@ -86,23 +91,75 @@ class Notifier @Inject constructor(
                     .setGroup(group)
                     .setAutoCancel(true)
                     .setCategory(NotificationCompat.CATEGORY_EMAIL)
-                    .setContentIntent(openIntent(account.id, null))
+                    .setContentIntent(openIntent(account.id, m.id))
+                    .addAction(0, strings.get(R.string.action_mark_read), actionIntent(ACTION_MARK_READ, account.id, m.id))
+                    .addAction(0, strings.get(R.string.action_delete), actionIntent(ACTION_DELETE, account.id, m.id))
+                    .addExtras(Bundle().apply {
+                        putLong(EXTRA_MESSAGE_ID, m.id)
+                        putLong(EXTRA_ACCOUNT_ID, account.id)
+                    })
                     .build()
                 nm.notify(TAG_MESSAGE, m.id.toInt(), n)
             }
-            val summary = NotificationCompat.Builder(ctx, CH_MAIL)
-                .setSmallIcon(R.drawable.ic_stat_mail)
-                .setSubText(account.name)
-                .setContentTitle(account.name)
-                .setContentText(strings.get(R.string.notification_new_mail))
-                .setGroup(group)
-                .setGroupSummary(true)
-                .setAutoCancel(true)
-                .setContentIntent(openIntent(account.id, null))
-                .build()
-            nm.notify(TAG_SUMMARY, account.id.toInt(), summary)
+            postSummary(account.id, account.name)
         } catch (_: SecurityException) {
         }
+    }
+
+    private fun postSummary(accountId: Long, accountName: String) {
+        val count = activeMessageIds(accountId).size
+        if (count == 0) {
+            cancelSummary(accountId)
+            return
+        }
+        val summary = NotificationCompat.Builder(ctx, CH_MAIL)
+            .setSmallIcon(R.drawable.ic_stat_mail)
+            .setSubText(accountName)
+            .setContentTitle(accountName)
+            .setContentText(strings.plural(R.plurals.new_messages, count, count))
+            .setGroup(group(accountId))
+            .setGroupSummary(true)
+            .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
+            .setAutoCancel(true)
+            .setCategory(NotificationCompat.CATEGORY_EMAIL)
+            .setContentIntent(openIntent(accountId, null))
+            .addAction(0, strings.get(R.string.action_read_all), actionIntent(ACTION_MARK_ALL_READ, accountId, null))
+            .addExtras(Bundle().apply { putString(EXTRA_ACCOUNT_NAME, accountName) })
+            .build()
+        try {
+            NotificationManagerCompat.from(ctx).notify(TAG_SUMMARY, accountId.toInt(), summary)
+        } catch (_: SecurityException) {
+        }
+    }
+
+    /** id писем, уведомления о которых сейчас показаны для ящика. */
+    fun activeMessageIds(accountId: Long): List<Long> {
+        val nm = ctx.getSystemService(NotificationManager::class.java)
+        return nm.activeNotifications
+            .filter { it.tag == TAG_MESSAGE && it.notification.group == group(accountId) }
+            .map { it.notification.extras.getLong(EXTRA_MESSAGE_ID, it.id.toLong()) }
+    }
+
+    /** Убирает уведомление письма; summary — если в группе больше ничего нет, иначе обновляет счётчик. */
+    fun cancelMessage(accountId: Long, messageId: Long) {
+        val nm = ctx.getSystemService(NotificationManager::class.java)
+        nm.cancel(TAG_MESSAGE, messageId.toInt())
+        val summary = nm.activeNotifications.firstOrNull { it.tag == TAG_SUMMARY && it.id == accountId.toInt() }
+        if (activeMessageIds(accountId).isEmpty()) {
+            cancelSummary(accountId)
+        } else if (summary != null) {
+            summary.notification.extras.getString(EXTRA_ACCOUNT_NAME)?.let { postSummary(accountId, it) }
+        }
+    }
+
+    fun cancelAccount(accountId: Long) {
+        val nm = ctx.getSystemService(NotificationManager::class.java)
+        for (id in activeMessageIds(accountId)) nm.cancel(TAG_MESSAGE, id.toInt())
+        cancelSummary(accountId)
+    }
+
+    private fun cancelSummary(accountId: Long) {
+        ctx.getSystemService(NotificationManager::class.java).cancel(TAG_SUMMARY, accountId.toInt())
     }
 
     private fun canPost(): Boolean =
@@ -110,6 +167,24 @@ class Notifier @Inject constructor(
             ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
     private fun group(accountId: Long) = "account_$accountId"
+
+    /** Кнопка уведомления → BroadcastReceiver (без открытия приложения). Уникальный requestCode на письмо. */
+    private fun actionIntent(action: String, accountId: Long, messageId: Long?): PendingIntent {
+        val intent = Intent(ctx, NotificationActionReceiver::class.java).apply {
+            this.action = action
+            putExtra(EXTRA_ACCOUNT_ID, accountId)
+            if (messageId != null) putExtra(EXTRA_MESSAGE_ID, messageId)
+        }
+        val requestCode = when (action) {
+            ACTION_MARK_READ -> (messageId!! * 4 + 1).toInt()
+            ACTION_DELETE -> (messageId!! * 4 + 2).toInt()
+            else -> -(accountId * 4 + 3).toInt()
+        }
+        return PendingIntent.getBroadcast(
+            ctx, requestCode, intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+    }
 
     private fun openIntent(accountId: Long?, messageId: Long?): PendingIntent {
         val intent = Intent(ctx, MainActivity::class.java).apply {
@@ -134,5 +209,13 @@ class Notifier @Inject constructor(
         const val SERVICE_NOTIFICATION_ID = 1
         private const val TAG_MESSAGE = "msg"
         private const val TAG_SUMMARY = "summary"
+        private const val MAX_PER_SYNC = 10
+
+        const val ACTION_MARK_READ = "com.mailtabs.app.action.MARK_READ"
+        const val ACTION_DELETE = "com.mailtabs.app.action.DELETE"
+        const val ACTION_MARK_ALL_READ = "com.mailtabs.app.action.MARK_ALL_READ"
+        const val EXTRA_ACCOUNT_ID = "accountId"
+        const val EXTRA_MESSAGE_ID = "messageId"
+        private const val EXTRA_ACCOUNT_NAME = "accountName"
     }
 }

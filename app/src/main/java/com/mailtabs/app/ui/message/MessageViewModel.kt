@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mailtabs.app.R
 import com.mailtabs.app.data.MailRepository
+import com.mailtabs.app.push.Notifier
 import com.mailtabs.app.settings.Strings
 import com.mailtabs.app.data.db.AttachmentEntity
 import com.mailtabs.app.data.db.FolderEntity
@@ -39,6 +40,7 @@ class MessageViewModel @Inject constructor(
     saved: SavedStateHandle,
     private val repo: MailRepository,
     private val strings: Strings,
+    private val notifier: Notifier,
 ) : ViewModel() {
 
     private val id: Long = checkNotNull(saved.get<Long>("messageId"))
@@ -63,6 +65,8 @@ class MessageViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             val m = repo.getMessage(id) ?: return@launch
+            // Письмо открыто (в т.ч. тапом по уведомлению) — его уведомление больше не нужно.
+            runCatching { notifier.cancelMessage(m.accountId, id) }
             if (!m.seen) repo.setSeen(m, true)
             if (m.bodyHtml == null && m.bodyText == null) {
                 _loading.value = true
