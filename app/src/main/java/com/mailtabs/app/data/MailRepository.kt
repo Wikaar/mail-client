@@ -454,6 +454,20 @@ class MailRepository @Inject constructor(
         enqueue(PendingActionEntity(accountId = m.accountId, type = if (seen) ActionType.SET_SEEN else ActionType.SET_UNSEEN, folder = m.folder, uid = m.uid))
     }
 
+    /** Важное письмо (звёздочка) ↔ IMAP-флаг \Flagged. */
+    fun toggleFlagged(messageId: Long) = scope.launch {
+        val m = messageDao.get(messageId) ?: return@launch
+        val flagged = !m.flagged
+        messageDao.setFlagged(m.id, flagged)
+        enqueue(
+            PendingActionEntity(
+                accountId = m.accountId,
+                type = if (flagged) ActionType.SET_FLAGGED else ActionType.SET_UNFLAGGED,
+                folder = m.folder, uid = m.uid,
+            )
+        )
+    }
+
     fun setHidden(messageId: Long, hidden: Boolean) = scope.launch { messageDao.setHidden(messageId, hidden) }
 
     fun unhideAll(accountId: Long) = scope.launch { messageDao.unhideAll(accountId) }

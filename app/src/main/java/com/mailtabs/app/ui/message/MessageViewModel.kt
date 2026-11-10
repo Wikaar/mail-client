@@ -79,6 +79,8 @@ class MessageViewModel @Inject constructor(
         viewModelScope.launch { _events.send(MessageEvent.Close) }
     }
 
+    fun toggleFlagged() { repo.toggleFlagged(id) }
+
     fun move(target: String) {
         repo.moveMessage(id, target)
         viewModelScope.launch { _events.send(MessageEvent.Close) }

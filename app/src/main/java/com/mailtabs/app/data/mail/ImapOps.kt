@@ -115,6 +115,9 @@ object ImapOps {
                 ActionType.SET_SEEN, ActionType.SET_UNSEEN ->
                     f.getMessageByUID(a.uid)?.setFlag(Flags.Flag.SEEN, a.type == ActionType.SET_SEEN)
 
+                ActionType.SET_FLAGGED, ActionType.SET_UNFLAGGED ->
+                    f.getMessageByUID(a.uid)?.setFlag(Flags.Flag.FLAGGED, a.type == ActionType.SET_FLAGGED)
+
                 ActionType.MOVE -> {
                     val m = f.getMessageByUID(a.uid) ?: return
                     expunge = move(store, f, arrayOf(m), target(store, a, trashName))

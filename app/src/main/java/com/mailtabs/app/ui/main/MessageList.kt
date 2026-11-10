@@ -29,6 +29,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.MarkEmailRead
 import androidx.compose.material.icons.filled.MarkEmailUnread
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -133,6 +135,7 @@ fun AccountPage(
                         onClick = { onOpenMessage(m.id) },
                         onLongClick = { moveFor = m.id },
                         onToggleRead = { vm.toggleSeen(m.id) },
+                        onToggleFlag = { vm.toggleFlagged(m.id) },
                         onDelete = {
                             vm.hide(m.id)
                             scope.launch {
@@ -173,6 +176,7 @@ private fun SwipeableMessageRow(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onToggleRead: () -> Unit,
+    onToggleFlag: () -> Unit,
     onDelete: () -> Unit,
 ) {
     val toggle by rememberUpdatedState(onToggleRead)
@@ -255,7 +259,7 @@ private fun SwipeableMessageRow(
         },
     ) {
         Box(Modifier.graphicsLayer { translationX = bounce.value }) {
-            MessageRow(m, onClick, onLongClick)
+            MessageRow(m, onClick, onLongClick, onToggleFlag)
         }
     }
 }
@@ -268,7 +272,7 @@ private fun SwipeToDismissBoxState.offsetOrZero(): Float =
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun MessageRow(m: MessageListItem, onClick: () -> Unit, onLongClick: () -> Unit) {
+private fun MessageRow(m: MessageListItem, onClick: () -> Unit, onLongClick: () -> Unit, onToggleFlag: () -> Unit) {
     val unread = !m.seen
     val name = m.fromName.ifBlank { m.fromAddress }.ifBlank { "(без отправителя)" }
     Row(
@@ -313,14 +317,44 @@ private fun MessageRow(m: MessageListItem, onClick: () -> Unit, onLongClick: () 
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(
-                m.preview,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    m.preview,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                StarToggle(flagged = m.flagged, onToggle = onToggleFlag)
+            }
         }
+    }
+}
+
+val StarColor = Color(0xFFF9A825)
+
+/** Звёздочка «Важное»: тап переключает флаг \Flagged. */
+@Composable
+fun StarToggle(flagged: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier) {
+    val scale by animateFloatAsState(
+        targetValue = if (flagged) 1.15f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioHighBouncy, stiffness = Spring.StiffnessMedium),
+        label = "starScale",
+    )
+    Box(
+        modifier
+            .size(32.dp)
+            .clip(CircleShape)
+            .clickable(onClick = onToggle),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            if (flagged) Icons.Default.Star else Icons.Default.StarBorder,
+            contentDescription = if (flagged) "Снять пометку «Важное»" else "Пометить как важное",
+            tint = if (flagged) StarColor else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp).graphicsLayer { scaleX = scale; scaleY = scale },
+        )
     }
 }
 

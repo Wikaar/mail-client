@@ -19,9 +19,11 @@ import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenu
@@ -31,6 +33,7 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -90,6 +93,7 @@ fun MainScreen(
     val currentVm = accountViewModel(current.id)
     val currentFolder by currentVm.currentFolder.collectAsStateWithLifecycle()
     val currentFolderName by currentVm.folderName.collectAsStateWithLifecycle()
+    val currentOnlyFlagged by currentVm.onlyFlagged.collectAsStateWithLifecycle()
 
     LaunchedEffect(openAccountId, tabs) {
         if (openAccountId != null) {
@@ -135,7 +139,7 @@ fun MainScreen(
                                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                                 )
                                 Text(
-                                    current.name,
+                                    if (currentOnlyFlagged) "${current.name} · ★" else current.name,
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
@@ -271,6 +275,13 @@ private fun AccountMenu(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        val onlyFlagged by vm.onlyFlagged.collectAsStateWithLifecycle()
+        DropdownMenuItem(
+            text = { Text("Только важные") },
+            leadingIcon = { Icon(Icons.Default.Star, null, tint = if (onlyFlagged) StarColor else LocalContentColor.current) },
+            trailingIcon = { Checkbox(checked = onlyFlagged, onCheckedChange = null) },
+            onClick = { vm.toggleOnlyFlagged(); onDismiss() },
         )
         DropdownMenuItem(
             text = { Text("Пометить все прочитанными") },

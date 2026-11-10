@@ -60,6 +60,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mailtabs.app.data.db.MessageEntity
 import com.mailtabs.app.ui.main.Avatar
 import com.mailtabs.app.ui.main.MoveToFolderDialog
+import com.mailtabs.app.ui.main.StarToggle
 import java.text.DateFormat
 import java.util.Date
 
@@ -109,6 +110,11 @@ fun MessageScreen(
                 actions = {
                     val m = message
                     if (m != null) {
+                        StarToggle(
+                            flagged = m.flagged,
+                            onToggle = vm::toggleFlagged,
+                            modifier = Modifier.padding(horizontal = 8.dp),
+                        )
                         IconButton(onClick = { onReply(m.accountId, m.id, false) }) {
                             Icon(Icons.Default.Reply, "Ответить")
                         }

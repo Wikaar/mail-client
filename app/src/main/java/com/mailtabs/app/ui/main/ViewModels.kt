@@ -60,9 +60,17 @@ class AccountViewModel @AssistedInject constructor(
         combine(folders, _folder) { list, name -> list.firstOrNull { it.fullName == name } }
             .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
+    private val _onlyFlagged = MutableStateFlow(false)
+    /** Фильтр «Только важные» (звёздочка). */
+    val onlyFlagged: StateFlow<Boolean> = _onlyFlagged.asStateFlow()
+
     val messages: StateFlow<List<MessageListItem>> =
-        _folder.flatMapLatest { repo.messages(accountId, it) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        combine(_folder.flatMapLatest { repo.messages(accountId, it) }, _onlyFlagged) { list, only ->
+            if (only) list.filter { it.flagged } else list
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun toggleOnlyFlagged() { _onlyFlagged.value = !_onlyFlagged.value }
+    fun toggleFlagged(messageId: Long) { repo.toggleFlagged(messageId) }
 
     private val _refreshing = MutableStateFlow(false)
     val refreshing: StateFlow<Boolean> = _refreshing.asStateFlow()

@@ -105,6 +105,9 @@ interface MessageDao {
     @Query("UPDATE messages SET seen = :seen WHERE id = :id")
     suspend fun setSeen(id: Long, seen: Boolean)
 
+    @Query("UPDATE messages SET flagged = :flagged WHERE id = :id")
+    suspend fun setFlagged(id: Long, flagged: Boolean)
+
     @Query("UPDATE messages SET hidden = :hidden WHERE id = :id")
     suspend fun setHidden(id: Long, hidden: Boolean)
 
