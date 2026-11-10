@@ -44,7 +44,7 @@ enum class Preset(
     @StringRes val hint: Int,
 ) {
     IONOS(R.string.preset_ionos, "imap.ionos.de", 993, "smtp.ionos.de", 465, true, 0),
-    YANDEX(R.string.preset_yandex, "imap.yandex.ru", 993, "smtp.yandex.ru", 465, false, R.string.preset_yandex_hint),
+    YANDEX(R.string.preset_yandex, "imap.ya.ru", 993, "smtp.ya.ru", 465, false, R.string.preset_yandex_hint),
     CUSTOM(R.string.preset_custom, "", 993, "", 465, true, 0),
 }
 

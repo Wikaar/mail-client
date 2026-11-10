@@ -5,6 +5,13 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -23,8 +30,41 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace
 
+      # Имя файла из versionName: WikarM@il.v.1.1.apk, WikarM@il.v.1.2.apk и т.д.
+      - name: Rename APK
+        id: apk
+        run: |
+          VERSION=$(sed -n 's/^ *versionName *= *"\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n1)
+          test -n "$VERSION"
+          NAME="WikarM@il.v.${VERSION}.apk"
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk "dist/$NAME"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "path=dist/$NAME" >> "$GITHUB_OUTPUT"
+
       - uses: actions/upload-artifact@v4
         with:
           name: wikarmail-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: ${{ steps.apk.outputs.path }}
           if-no-files-found: error
+
+      # Публикация в GitHub Releases: тег v<versionName> и «скользящий» тег latest.
+      - name: Publish release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.apk.outputs.version }}
+          APK: ${{ steps.apk.outputs.path }}
+        run: |
+          TAG="v${VERSION}"
+          NOTES="WikarM@il ${VERSION} (debug build, commit ${GITHUB_SHA::7})"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$APK" --clobber
+          else
+            gh release create "$TAG" "$APK" --target "$GITHUB_SHA" \
+              --title "WikarM@il ${VERSION}" --notes "$NOTES" --latest=false
+          fi
+          gh release delete latest --cleanup-tag --yes >/dev/null 2>&1 || true
+          gh release create latest "$APK" --target "$GITHUB_SHA" \
+            --title "WikarM@il ${VERSION} (latest)" --notes "$NOTES" --latest
