@@ -1,5 +1,10 @@
 package com.mailtabs.app.ui.main
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -34,6 +39,7 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -42,14 +48,20 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -57,11 +69,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mailtabs.app.data.db.FolderEntity
 import com.mailtabs.app.data.db.MessageListItem
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlin.math.abs
 import kotlin.math.absoluteValue
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -93,8 +107,11 @@ fun AccountPage(
     ) {
         LazyColumn(Modifier.fillMaxSize()) {
             if (messages.isEmpty()) {
-                item {
-                    Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
+                item(key = "empty") {
+                    Box(
+                        Modifier.fillMaxWidth().padding(48.dp).animateItem(),
+                        contentAlignment = Alignment.Center,
+                    ) {
                         Text(
                             if (refreshing) "Загрузка…" else "Писем нет",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -103,28 +120,39 @@ fun AccountPage(
                 }
             }
             items(messages, key = { it.id }) { m ->
-                SwipeableMessageRow(
-                    m = m,
-                    onClick = { onOpenMessage(m.id) },
-                    onLongClick = { moveFor = m.id },
-                    onToggleRead = { vm.toggleSeen(m.id) },
-                    onDelete = {
-                        vm.hide(m.id)
-                        scope.launch {
-                            var undone = false
-                            try {
-                                undone = snackbar.showSnackbar(
-                                    message = "Письмо удалено",
-                                    actionLabel = "Отменить",
-                                    duration = SnackbarDuration.Short,
-                                ) == SnackbarResult.ActionPerformed
-                            } finally {
-                                if (undone) vm.undoHide(m.id) else vm.commitDelete(m.id)
+                // Удалённая строка плавно исчезает, соседние плавно съезжают; «Отменить» возвращает её с fade-in.
+                Column(
+                    Modifier.animateItem(
+                        fadeInSpec = tween(durationMillis = 280),
+                        placementSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                        fadeOutSpec = tween(durationMillis = 280),
+                    )
+                ) {
+                    SwipeableMessageRow(
+                        m = m,
+                        onClick = { onOpenMessage(m.id) },
+                        onLongClick = { moveFor = m.id },
+                        onToggleRead = { vm.toggleSeen(m.id) },
+                        onDelete = {
+                            vm.hide(m.id)
+                            scope.launch {
+                                // Предыдущий Snackbar закрываем — его удаление применится сразу.
+                                snackbar.currentSnackbarData?.dismiss()
+                                var undone = false
+                                try {
+                                    undone = snackbar.showSnackbar(
+                                        message = "Письмо удалено",
+                                        actionLabel = "Отменить",
+                                        duration = SnackbarDuration.Short,
+                                    ) == SnackbarResult.ActionPerformed
+                                } finally {
+                                    if (undone) vm.undoHide(m.id) else vm.commitDelete(m.id)
+                                }
                             }
-                        }
-                    },
-                )
-                HorizontalDivider()
+                        },
+                    )
+                    HorizontalDivider()
+                }
             }
         }
     }
@@ -149,40 +177,94 @@ private fun SwipeableMessageRow(
 ) {
     val toggle by rememberUpdatedState(onToggleRead)
     val delete by rememberUpdatedState(onDelete)
-    val state = rememberSwipeToDismissBoxState(
+    val scope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
+    var width by remember { mutableIntStateOf(0) }
+    /** Небольшой «отскок» строки после возврата на место (прочитано/непрочитано). */
+    val bounce = remember { Animatable(0f) }
+    lateinit var state: SwipeToDismissBoxState
+    state = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
             when (value) {
                 SwipeToDismissBoxValue.EndToStart -> { delete(); true }
-                SwipeToDismissBoxValue.StartToEnd -> { toggle(); false }
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    toggle()
+                    scope.launch {
+                        // Дожидаемся, пока строка вернётся, и даём пружинистый overshoot.
+                        snapshotFlow { state.offsetOrZero() }.first { abs(it) < 2f }
+                        bounce.animateTo(
+                            targetValue = 0f,
+                            animationSpec = spring(dampingRatio = 0.4f, stiffness = Spring.StiffnessMedium),
+                            initialVelocity = -1800f,
+                        )
+                    }
+                    false
+                }
                 SwipeToDismissBoxValue.Settled -> false
             }
         },
-        positionalThreshold = { it * 0.35f },
+        positionalThreshold = { it * SWIPE_THRESHOLD },
     )
     SwipeToDismissBox(
         state = state,
+        modifier = Modifier.onSizeChanged { width = it.width },
         backgroundContent = {
-            val dir = state.dismissDirection
-            val (color, icon, align) = when (dir) {
-                SwipeToDismissBoxValue.EndToStart -> Triple(Color(0xFFD32F2F), Icons.Default.Delete, Alignment.CenterEnd)
-                SwipeToDismissBoxValue.StartToEnd -> Triple(
+            val offset = state.offsetOrZero()
+            val fraction = if (width > 0) (abs(offset) / width).coerceIn(0f, 1f) else 0f
+            val reached = fraction >= SWIPE_THRESHOLD
+            // Вибрация в момент достижения порога срабатывания.
+            LaunchedEffect(reached) {
+                if (reached) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            }
+            val iconScale by animateFloatAsState(
+                targetValue = if (reached) 1.35f else 0.85f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                label = "swipeIconScale",
+            )
+            // Фон проявляется по мере свайпа и становится полностью непрозрачным у порога.
+            val reveal = (fraction / SWIPE_THRESHOLD).coerceIn(0f, 1f)
+            val (color, icon, align) = when {
+                offset < 0f -> Triple(Color(0xFFD32F2F), Icons.Default.Delete, Alignment.CenterEnd)
+                offset > 0f -> Triple(
                     MaterialTheme.colorScheme.primary,
                     if (m.seen) Icons.Default.MarkEmailUnread else Icons.Default.MarkEmailRead,
                     Alignment.CenterStart,
                 )
-                SwipeToDismissBoxValue.Settled -> Triple(Color.Transparent, null, Alignment.Center)
+                else -> Triple(Color.Transparent, null, Alignment.Center)
             }
             Box(
-                Modifier.fillMaxSize().background(color).padding(horizontal = 24.dp),
+                Modifier
+                    .fillMaxSize()
+                    .background(color.copy(alpha = color.alpha * reveal))
+                    .padding(horizontal = 24.dp),
                 contentAlignment = align,
             ) {
-                if (icon != null) Icon(icon, contentDescription = null, tint = Color.White)
+                if (icon != null) {
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.graphicsLayer {
+                            scaleX = iconScale
+                            scaleY = iconScale
+                            alpha = reveal
+                        },
+                    )
+                }
             }
         },
     ) {
-        MessageRow(m, onClick, onLongClick)
+        Box(Modifier.graphicsLayer { translationX = bounce.value }) {
+            MessageRow(m, onClick, onLongClick)
+        }
     }
 }
+
+private const val SWIPE_THRESHOLD = 0.38f
+
+@OptIn(ExperimentalMaterial3Api::class)
+private fun SwipeToDismissBoxState.offsetOrZero(): Float =
+    runCatching { requireOffset() }.getOrDefault(0f).let { if (it.isNaN()) 0f else it }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
