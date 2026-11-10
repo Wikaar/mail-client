@@ -105,7 +105,7 @@ fun MainScreen(
 
     ModalNavigationDrawer(
         drawerState = drawerState,
-        // Жесты открытия выключены, чтобы не мешать свайпу между вкладками.
+        // Жест открытия выключен, чтобы не мешать свайпу по строкам писем.
         gesturesEnabled = drawerState.isOpen,
         drawerContent = {
             ModalDrawerSheet {
@@ -191,8 +191,10 @@ fun MainScreen(
             },
             snackbarHost = { SnackbarHost(snackbar) },
         ) { padding ->
+            // Вкладки переключаются только тапом по шапке: горизонтальный свайп отдан строкам писем.
             HorizontalPager(
                 state = pagerState,
+                userScrollEnabled = false,
                 modifier = Modifier.padding(padding).fillMaxSize(),
                 key = { tabs[it].id },
             ) { p ->

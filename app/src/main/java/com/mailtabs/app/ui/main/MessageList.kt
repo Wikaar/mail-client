@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -52,7 +51,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -129,10 +127,6 @@ fun AccountPage(
                 HorizontalDivider()
             }
         }
-        // Полосы у краёв экрана отдают горизонтальный свайп пейджеру (переключение вкладок),
-        // а свайп по самой строке письма — действиям над письмом.
-        EdgeSwipeZone(Modifier.align(Alignment.CenterStart))
-        EdgeSwipeZone(Modifier.align(Alignment.CenterEnd))
     }
 
     moveFor?.let { id ->
@@ -142,18 +136,6 @@ fun AccountPage(
             onDismiss = { moveFor = null },
         )
     }
-}
-
-@Composable
-private fun EdgeSwipeZone(modifier: Modifier) {
-    Box(
-        modifier
-            .fillMaxHeight()
-            .width(36.dp)
-            .pointerInput(Unit) {
-                awaitPointerEventScope { while (true) awaitPointerEvent() }
-            }
-    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
