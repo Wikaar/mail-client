@@ -17,8 +17,10 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ManageAccounts
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
@@ -54,12 +56,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mailtabs.app.R
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -71,6 +76,7 @@ fun MainScreen(
     onCompose: (Long) -> Unit,
     onManageAccounts: () -> Unit,
     onAddAccount: () -> Unit,
+    onSettings: () -> Unit,
     vm: MainViewModel = hiltViewModel(),
 ) {
     val tabsOrNull by vm.tabs.collectAsStateWithLifecycle()
@@ -80,7 +86,7 @@ fun MainScreen(
         return
     }
     if (tabs.isEmpty()) {
-        NoAccounts(onAddAccount)
+        NoAccounts(onAddAccount, onSettings)
         return
     }
 
@@ -124,6 +130,10 @@ fun MainScreen(
                         scope.launch { drawerState.close() }
                         onManageAccounts()
                     },
+                    onSettings = {
+                        scope.launch { drawerState.close() }
+                        onSettings()
+                    },
                 )
             }
         },
@@ -139,7 +149,11 @@ fun MainScreen(
                                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                                 )
                                 Text(
-                                    if (currentOnlyFlagged) "${current.name} · ★" else current.name,
+                                    if (currentOnlyFlagged) {
+                                        stringResource(R.string.subtitle_only_important, current.name)
+                                    } else {
+                                        current.name
+                                    },
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
@@ -148,13 +162,13 @@ fun MainScreen(
                         },
                         navigationIcon = {
                             IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                Icon(Icons.Default.Menu, contentDescription = "Папки")
+                                Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.folders))
                             }
                         },
                         actions = {
                             Box {
                                 IconButton(onClick = { topMenu = true }) {
-                                    Icon(Icons.Default.MoreVert, contentDescription = "Меню ящика")
+                                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.account_menu))
                                 }
                                 AccountMenu(
                                     expanded = topMenu,
@@ -162,10 +176,12 @@ fun MainScreen(
                                     onDismiss = { topMenu = false },
                                     onDeleteAll = { deleteAllFor = current.id },
                                     onManageAccounts = onManageAccounts,
+                                    onSettings = onSettings,
                                 )
                             }
                         },
                     )
+                    // Вкладки переключаются только тапом по шапке.
                     ScrollableTabRow(selectedTabIndex = page, edgePadding = 8.dp) {
                         tabs.forEachIndexed { i, tab ->
                             AccountTabItem(
@@ -180,6 +196,7 @@ fun MainScreen(
                                     onDismiss = { menuForTab = null },
                                     onDeleteAll = { deleteAllFor = tab.id },
                                     onManageAccounts = onManageAccounts,
+                                    onSettings = onSettings,
                                 )
                             }
                         }
@@ -190,12 +207,12 @@ fun MainScreen(
                 ExtendedFloatingActionButton(
                     onClick = { onCompose(current.id) },
                     icon = { Icon(Icons.Default.Edit, contentDescription = null) },
-                    text = { Text("Написать") },
+                    text = { Text(stringResource(R.string.compose)) },
                 )
             },
             snackbarHost = { SnackbarHost(snackbar) },
         ) { padding ->
-            // Вкладки переключаются только тапом по шапке: горизонтальный свайп отдан строкам писем.
+            // Свайп между вкладками выключен: горизонтальный свайп отдан строкам писем.
             HorizontalPager(
                 state = pagerState,
                 userScrollEnabled = false,
@@ -264,39 +281,48 @@ private fun AccountMenu(
     onDismiss: () -> Unit,
     onDeleteAll: () -> Unit,
     onManageAccounts: () -> Unit,
+    onSettings: () -> Unit,
 ) {
     if (!expanded) return
     val vm = accountViewModel(accountId)
     val folder by vm.currentFolder.collectAsStateWithLifecycle()
     val folderName by vm.folderName.collectAsStateWithLifecycle()
+    val onlyFlagged by vm.onlyFlagged.collectAsStateWithLifecycle()
     DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
         Text(
-            "Папка: ${folderTitle(folder, folderName)}",
+            stringResource(R.string.menu_folder, folderTitle(folder, folderName)),
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        val onlyFlagged by vm.onlyFlagged.collectAsStateWithLifecycle()
         DropdownMenuItem(
-            text = { Text("Только важные") },
-            leadingIcon = { Icon(Icons.Default.Star, null, tint = if (onlyFlagged) StarColor else LocalContentColor.current) },
+            text = { Text(stringResource(R.string.filter_only_important)) },
+            leadingIcon = {
+                Icon(Icons.Default.Star, null, tint = if (onlyFlagged) StarColor else LocalContentColor.current)
+            },
             trailingIcon = { Checkbox(checked = onlyFlagged, onCheckedChange = null) },
             onClick = { vm.toggleOnlyFlagged(); onDismiss() },
         )
         DropdownMenuItem(
-            text = { Text("Пометить все прочитанными") },
+            text = { Text(stringResource(R.string.mark_all_read)) },
             leadingIcon = { Icon(Icons.Default.DoneAll, null) },
             onClick = { vm.markAllRead(); onDismiss() },
         )
         DropdownMenuItem(
-            text = { Text("Удалить все письма") },
+            text = { Text(stringResource(R.string.delete_all)) },
             leadingIcon = { Icon(Icons.Default.DeleteSweep, null) },
             onClick = { onDismiss(); onDeleteAll() },
         )
         HorizontalDivider()
         DropdownMenuItem(
-            text = { Text("Управление ящиками") },
+            text = { Text(stringResource(R.string.manage_accounts)) },
+            leadingIcon = { Icon(Icons.Default.ManageAccounts, null) },
             onClick = { onDismiss(); onManageAccounts() },
+        )
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.settings_title)) },
+            leadingIcon = { Icon(Icons.Default.Settings, null) },
+            onClick = { onDismiss(); onSettings() },
         )
     }
 }
@@ -310,49 +336,38 @@ private fun DeleteAllDialog(tab: AccountTab, onDismiss: () -> Unit) {
     LaunchedEffect(tab.id, folderName) { count = vm.countForDeleteAll() }
     val n = count
     val trash = vm.isTrash()
+    val title = folderTitle(folder, folderName)
+    val text = if (n == null) {
+        stringResource(R.string.delete_all_counting)
+    } else {
+        pluralStringResource(R.plurals.delete_all_text, n, tab.name, title, n) + " " +
+            stringResource(if (trash) R.string.delete_all_permanent else R.string.delete_all_to_trash)
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Удалить все письма?") },
-        text = {
-            Text(
-                if (n == null) "Подсчёт писем…" else buildString {
-                    append("Ящик «${tab.name}», папка «${folderTitle(folder, folderName)}»: $n ")
-                    append(pluralLetters(n))
-                    append(if (trash) ". Они будут удалены безвозвратно." else ". Они будут перемещены в Корзину.")
-                }
-            )
-        },
+        title = { Text(stringResource(R.string.delete_all_title)) },
+        text = { Text(text) },
         confirmButton = {
             TextButton(
                 enabled = n != null && n > 0,
                 onClick = { vm.deleteAll(); onDismiss() },
-            ) { Text(if (n != null) "Удалить ($n)" else "Удалить") }
+            ) { Text(if (n != null) stringResource(R.string.delete_count, n) else stringResource(R.string.delete)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
-private fun pluralLetters(n: Int): String {
-    val m10 = n % 10
-    val m100 = n % 100
-    return when {
-        m10 == 1 && m100 != 11 -> "письмо"
-        m10 in 2..4 && m100 !in 12..14 -> "письма"
-        else -> "писем"
-    }
-}
-
 @Composable
-private fun NoAccounts(onAddAccount: () -> Unit) {
+private fun NoAccounts(onAddAccount: () -> Unit, onSettings: () -> Unit) {
     Column(
         Modifier.fillMaxSize().padding(32.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("Нет почтовых ящиков", style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(R.string.no_accounts_title), style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.padding(8.dp))
         Text(
-            "Добавьте ящик IONOS, Яндекс или любой другой с IMAP/SMTP. Каждый ящик будет отдельной вкладкой.",
+            stringResource(R.string.no_accounts_text),
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -360,7 +375,13 @@ private fun NoAccounts(onAddAccount: () -> Unit) {
         Button(onClick = onAddAccount) {
             Icon(Icons.Default.Add, null)
             Spacer(Modifier.width(8.dp))
-            Text("Добавить ящик")
+            Text(stringResource(R.string.add_account))
+        }
+        Spacer(Modifier.padding(4.dp))
+        TextButton(onClick = onSettings) {
+            Icon(Icons.Default.Settings, null)
+            Spacer(Modifier.width(8.dp))
+            Text(stringResource(R.string.settings_title))
         }
     }
 }

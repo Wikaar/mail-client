@@ -47,7 +47,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.mailtabs.app.R
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mailtabs.app.data.db.AccountEntity
@@ -68,14 +70,14 @@ fun AccountsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Почтовые ящики") },
+                title = { Text(stringResource(R.string.accounts_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Назад") }
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
                 },
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAdd) { Icon(Icons.Default.Add, "Добавить ящик") }
+            FloatingActionButton(onClick = onAdd) { Icon(Icons.Default.Add, stringResource(R.string.add_account)) }
         },
     ) { padding ->
         LazyColumn(Modifier.padding(padding).fillMaxSize()) {
@@ -85,7 +87,7 @@ fun AccountsScreen(
                     supportingContent = { Text("${a.email} · ${a.imapHost}") },
                     leadingContent = { Avatar(a.name, a.email) },
                     trailingContent = {
-                        IconButton(onClick = { confirmDelete = a }) { Icon(Icons.Default.Delete, "Удалить ящик") }
+                        IconButton(onClick = { confirmDelete = a }) { Icon(Icons.Default.Delete, stringResource(R.string.delete_account)) }
                     },
                     modifier = Modifier.clickable { onEdit(a.id) },
                 )
@@ -97,12 +99,12 @@ fun AccountsScreen(
     confirmDelete?.let { a ->
         AlertDialog(
             onDismissRequest = { confirmDelete = null },
-            title = { Text("Удалить ящик?") },
-            text = { Text("Ящик «${a.name}» и его локальные письма будут удалены с устройства. На сервере ничего не изменится.") },
+            title = { Text(stringResource(R.string.delete_account_title)) },
+            text = { Text(stringResource(R.string.delete_account_text, a.name)) },
             confirmButton = {
-                TextButton(onClick = { vm.delete(a.id); confirmDelete = null }) { Text("Удалить") }
+                TextButton(onClick = { vm.delete(a.id); confirmDelete = null }) { Text(stringResource(R.string.delete)) }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text("Отмена") } },
+            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }
@@ -117,9 +119,9 @@ fun AccountEditScreen(onDone: () -> Unit, vm: AccountEditViewModel = hiltViewMod
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (vm.isEdit) "Настройки ящика" else "Новый ящик") },
+                title = { Text(stringResource(if (vm.isEdit) R.string.account_settings else R.string.new_account)) },
                 navigationIcon = {
-                    IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Назад") }
+                    IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
                 },
             )
         },
@@ -134,40 +136,40 @@ fun AccountEditScreen(onDone: () -> Unit, vm: AccountEditViewModel = hiltViewMod
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (!vm.isEdit) {
-                Text("Провайдер", style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.provider), style = MaterialTheme.typography.titleSmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Preset.entries.forEach { p ->
                         FilterChip(
                             selected = f.preset == p,
                             onClick = { vm.applyPreset(p) },
-                            label = { Text(p.title) },
+                            label = { Text(stringResource(p.title)) },
                         )
                     }
                 }
-                if (f.preset.hint.isNotEmpty()) {
-                    Text(f.preset.hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (f.preset.hint != 0) {
+                    Text(stringResource(f.preset.hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
-            OutlinedTextField(f.name, { upd { copy(name = it) } }, label = { Text("Название вкладки") },
+            OutlinedTextField(f.name, { upd { copy(name = it) } }, label = { Text(stringResource(R.string.tab_name)) },
                 singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(f.email, { upd { copy(email = it) } }, label = { Text("Адрес почты") },
+            OutlinedTextField(f.email, { upd { copy(email = it) } }, label = { Text(stringResource(R.string.email_address)) },
                 singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(f.senderName, { upd { copy(senderName = it) } }, label = { Text("Имя отправителя") },
+            OutlinedTextField(f.senderName, { upd { copy(senderName = it) } }, label = { Text(stringResource(R.string.sender_name)) },
                 singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(f.username, { upd { copy(username = it) } },
-                label = { Text("Логин (по умолчанию — адрес)") },
+                label = { Text(stringResource(R.string.login_hint)) },
                 singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(f.password, { upd { copy(password = it) } },
-                label = { Text(if (vm.isEdit) "Пароль (пусто — не менять)" else "Пароль") },
+                label = { Text(stringResource(if (vm.isEdit) R.string.password_keep else R.string.password)) },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 modifier = Modifier.fillMaxWidth())
 
             Spacer(Modifier.height(8.dp))
-            Text("Входящая почта (IMAP)", style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.incoming_imap), style = MaterialTheme.typography.titleSmall)
             ServerFields(
                 host = f.imapHost, port = f.imapPort, security = f.imapSecurity,
                 onHost = { upd { copy(imapHost = it) } },
@@ -176,7 +178,7 @@ fun AccountEditScreen(onDone: () -> Unit, vm: AccountEditViewModel = hiltViewMod
             )
 
             Spacer(Modifier.height(8.dp))
-            Text("Исходящая почта (SMTP)", style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.outgoing_smtp), style = MaterialTheme.typography.titleSmall)
             ServerFields(
                 host = f.smtpHost, port = f.smtpPort, security = f.smtpSecurity,
                 onHost = { upd { copy(smtpHost = it) } },
@@ -185,7 +187,7 @@ fun AccountEditScreen(onDone: () -> Unit, vm: AccountEditViewModel = hiltViewMod
             )
 
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Text("Сохранять копию в «Отправленные»", modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.save_sent_copy), modifier = Modifier.weight(1f))
                 Switch(checked = f.saveSentCopy, onCheckedChange = { v -> upd { copy(saveSentCopy = v) } })
             }
 
@@ -201,9 +203,9 @@ fun AccountEditScreen(onDone: () -> Unit, vm: AccountEditViewModel = hiltViewMod
                 if (vm.saving) {
                     CircularProgressIndicator(Modifier.height(20.dp).width(20.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(8.dp))
-                    Text("Проверка подключения…")
+                    Text(stringResource(R.string.checking_connection))
                 } else {
-                    Text("Проверить и сохранить")
+                    Text(stringResource(R.string.check_and_save))
                 }
             }
         }
@@ -226,15 +228,15 @@ private fun ServerFields(
     onSecurity: (Security) -> Unit,
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(host, onHost, label = { Text("Сервер") }, singleLine = true,
+        OutlinedTextField(host, onHost, label = { Text(stringResource(R.string.server)) }, singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
             modifier = Modifier.weight(1f))
-        OutlinedTextField(port, { onPort(it.filter(Char::isDigit).take(5)) }, label = { Text("Порт") }, singleLine = true,
+        OutlinedTextField(port, { onPort(it.filter(Char::isDigit).take(5)) }, label = { Text(stringResource(R.string.port)) }, singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.width(100.dp))
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf(Security.SSL to "SSL/TLS", Security.STARTTLS to "STARTTLS", Security.NONE to "Нет").forEach { (s, label) ->
+        listOf(Security.SSL to "SSL/TLS", Security.STARTTLS to "STARTTLS", Security.NONE to stringResource(R.string.security_none)).forEach { (s, label) ->
             FilterChip(selected = security == s, onClick = { onSecurity(s) }, label = { Text(label) })
         }
     }

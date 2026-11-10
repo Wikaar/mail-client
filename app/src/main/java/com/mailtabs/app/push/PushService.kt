@@ -14,6 +14,10 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.mailtabs.app.data.MailRepository
 import com.mailtabs.app.data.db.AccountEntity
+import com.mailtabs.app.di.AppEntryPoint
+import com.mailtabs.app.settings.AppSettings
+import com.mailtabs.app.settings.SyncMode
+import dagger.hilt.android.EntryPointAccessors
 import com.sun.mail.imap.IMAPFolder
 import dagger.hilt.android.AndroidEntryPoint
 import javax.mail.Folder
@@ -29,6 +33,7 @@ import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -44,6 +49,7 @@ class PushService : Service() {
 
     @Inject lateinit var repo: MailRepository
     @Inject lateinit var notifier: Notifier
+    @Inject lateinit var settings: AppSettings
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val loops = HashMap<Long, Pair<AccountEntity, Job>>()
@@ -54,15 +60,18 @@ class PushService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        goForeground(0)
+        goForeground()
         scope.launch {
-            repo.accounts.collect { list -> reconcile(list) }
+            // Держим IDLE только для ящиков с включёнными уведомлениями и только в режиме «Мгновенно».
+            combine(repo.accounts, settings.state) { accounts, s ->
+                if (s.syncMode != SyncMode.INSTANT) emptyList() else accounts.filter { s.notifyFor(it.id) }
+            }.collect { list -> reconcile(list) }
         }
         registerNetworkCallback()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        goForeground(synchronized(loops) { loops.size })
+        goForeground()
         return START_STICKY
     }
 
@@ -74,9 +83,9 @@ class PushService : Service() {
         super.onDestroy()
     }
 
-    private fun goForeground(accounts: Int) {
+    private fun goForeground() {
         val type = if (Build.VERSION.SDK_INT >= 34) ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING else 0
-        ServiceCompat.startForeground(this, Notifier.SERVICE_NOTIFICATION_ID, notifier.serviceNotification(accounts), type)
+        ServiceCompat.startForeground(this, Notifier.SERVICE_NOTIFICATION_ID, notifier.serviceNotification(), type)
     }
 
     private fun reconcile(accounts: List<AccountEntity>) {
@@ -96,7 +105,6 @@ class PushService : Service() {
                 }
             }
         }
-        goForeground(accounts.size)
     }
 
     private fun restartAll() = synchronized(loops) {
@@ -202,13 +210,28 @@ class PushService : Service() {
                 Log.w(TAG, "Cannot start push service: ${e.message}")
             }
         }
+
+        fun stop(context: Context) {
+            context.stopService(Intent(context, PushService::class.java))
+        }
     }
 }
 
+/** После перезагрузки/обновления запускает выбранный в настройках механизм получения писем. */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
-            Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED -> PushService.start(context)
+            Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED -> {
+                val ep = EntryPointAccessors.fromApplication(context.applicationContext, AppEntryPoint::class.java)
+                val pending = goAsync()
+                ep.repository().scope.launch {
+                    try {
+                        ep.syncController().apply(startService = true)
+                    } finally {
+                        pending.finish()
+                    }
+                }
+            }
         }
     }
 }

@@ -107,7 +107,7 @@ object ImapOps {
     /** Применяет действие из офлайн-очереди на сервере. */
     fun apply(store: IMAPStore, a: PendingActionEntity, trashName: () -> String) {
         val f = store.getFolder(a.folder) as IMAPFolder
-        if (!f.exists()) throw FolderNotFoundException(f, "Папка ${a.folder} не найдена")
+        if (!f.exists()) throw FolderNotFoundException(f, "Folder ${a.folder} not found")
         f.open(Folder.READ_WRITE)
         var expunge = false
         try {
@@ -161,7 +161,7 @@ object ImapOps {
         val t = store.getFolder(name)
         if (!t.exists()) {
             if (isTrash) t.create(Folder.HOLDS_MESSAGES)
-            else throw FolderNotFoundException(t, "Папка $name не найдена")
+            else throw FolderNotFoundException(t, "Folder $name not found")
         }
         return t
     }

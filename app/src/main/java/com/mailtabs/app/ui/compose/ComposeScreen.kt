@@ -34,7 +34,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.mailtabs.app.R
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
@@ -52,15 +54,15 @@ fun ComposeScreen(onBack: () -> Unit, vm: ComposeViewModel = hiltViewModel()) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(vm.title) },
+                title = { Text(stringResource(vm.title)) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Назад") }
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
                 },
                 actions = {
                     if (vm.sending) {
                         CircularProgressIndicator(Modifier.padding(12.dp))
                     } else {
-                        IconButton(onClick = vm::send) { Icon(Icons.Default.Send, "Отправить") }
+                        IconButton(onClick = vm::send) { Icon(Icons.Default.Send, stringResource(R.string.send)) }
                     }
                 },
             )
@@ -84,7 +86,7 @@ fun ComposeScreen(onBack: () -> Unit, vm: ComposeViewModel = hiltViewModel()) {
                     onValueChange = {},
                     readOnly = true,
                     enabled = false,
-                    label = { Text("От") },
+                    label = { Text(stringResource(R.string.field_from)) },
                     trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) },
                     modifier = Modifier.fillMaxWidth().clickable { expanded = true },
                 )
@@ -99,30 +101,30 @@ fun ComposeScreen(onBack: () -> Unit, vm: ComposeViewModel = hiltViewModel()) {
             }
             OutlinedTextField(
                 value = vm.to, onValueChange = { vm.to = it },
-                label = { Text("Кому") },
+                label = { Text(stringResource(R.string.field_to)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
                 value = vm.cc, onValueChange = { vm.cc = it },
-                label = { Text("Копия") },
+                label = { Text(stringResource(R.string.field_cc)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
                 value = vm.subject, onValueChange = { vm.subject = it },
-                label = { Text("Тема") },
+                label = { Text(stringResource(R.string.field_subject)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
                 value = vm.body, onValueChange = { vm.body = it },
-                label = { Text("Сообщение") },
+                label = { Text(stringResource(R.string.field_body)) },
                 minLines = 10,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            if (vm.forwardNote.isNotEmpty()) {
-                Text(vm.forwardNote, modifier = Modifier.padding(top = 8.dp))
+            if (vm.forwardNote) {
+                Text(stringResource(R.string.forward_attachments_note), modifier = Modifier.padding(top = 8.dp))
             }
         }
     }

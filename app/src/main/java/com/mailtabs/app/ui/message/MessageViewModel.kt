@@ -4,7 +4,9 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mailtabs.app.R
 import com.mailtabs.app.data.MailRepository
+import com.mailtabs.app.settings.Strings
 import com.mailtabs.app.data.db.AttachmentEntity
 import com.mailtabs.app.data.db.FolderEntity
 import com.mailtabs.app.data.db.MessageEntity
@@ -36,6 +38,7 @@ sealed interface MessageEvent {
 class MessageViewModel @Inject constructor(
     saved: SavedStateHandle,
     private val repo: MailRepository,
+    private val strings: Strings,
 ) : ViewModel() {
 
     private val id: Long = checkNotNull(saved.get<Long>("messageId"))
@@ -66,7 +69,7 @@ class MessageViewModel @Inject constructor(
                 try {
                     repo.loadBody(id)
                 } catch (e: Exception) {
-                    _events.send(MessageEvent.Error(e.message ?: "Не удалось загрузить письмо"))
+                    _events.send(MessageEvent.Error(e.message ?: strings.get(R.string.err_load_message)))
                 } finally {
                     _loading.value = false
                 }
@@ -100,7 +103,7 @@ class MessageViewModel @Inject constructor(
                 val (uri, mime) = repo.downloadAttachment(a.id)
                 _events.send(MessageEvent.OpenFile(uri, mime, a.fileName))
             } catch (e: Exception) {
-                _events.send(MessageEvent.Error(e.message ?: "Не удалось скачать вложение"))
+                _events.send(MessageEvent.Error(e.message ?: strings.get(R.string.err_download_attachment)))
             } finally {
                 _loading.value = false
             }

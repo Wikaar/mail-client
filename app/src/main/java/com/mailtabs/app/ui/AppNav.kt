@@ -2,6 +2,10 @@ package com.mailtabs.app.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -12,25 +16,39 @@ import com.mailtabs.app.ui.accounts.AccountsScreen
 import com.mailtabs.app.ui.compose.ComposeScreen
 import com.mailtabs.app.ui.main.MainScreen
 import com.mailtabs.app.ui.message.MessageScreen
+import com.mailtabs.app.ui.settings.SettingsScreen
+
+/** Куда перейти по тапу на уведомление: вкладка ящика и (необязательно) письмо в ней. */
+data class OpenTarget(val accountId: Long, val messageId: Long?)
 
 @Composable
-fun AppNav(openAccountId: Long?, onOpenAccountHandled: () -> Unit) {
+fun AppNav(openTarget: OpenTarget?, onOpenTargetHandled: () -> Unit) {
     val nav = rememberNavController()
+    /** Вкладка, которую должен выбрать главный экран (переживает переход к письму и обратно). */
+    var requestedAccount by rememberSaveable { mutableStateOf<Long?>(null) }
 
-    LaunchedEffect(openAccountId) {
-        if (openAccountId != null) nav.popBackStack("main", inclusive = false)
+    LaunchedEffect(openTarget) {
+        val target = openTarget ?: return@LaunchedEffect
+        requestedAccount = target.accountId
+        nav.popBackStack("main", inclusive = false)
+        target.messageId?.let { nav.navigate("message/$it") }
+        onOpenTargetHandled()
     }
 
     NavHost(navController = nav, startDestination = "main") {
         composable("main") {
             MainScreen(
-                openAccountId = openAccountId,
-                onOpenAccountHandled = onOpenAccountHandled,
+                openAccountId = requestedAccount,
+                onOpenAccountHandled = { requestedAccount = null },
                 onOpenMessage = { nav.navigate("message/$it") },
                 onCompose = { accountId -> nav.navigate("compose?accountId=$accountId") },
                 onManageAccounts = { nav.navigate("accounts") },
                 onAddAccount = { nav.navigate("account_edit") },
+                onSettings = { nav.navigate("settings") },
             )
+        }
+        composable("settings") {
+            SettingsScreen(onBack = { nav.popBackStack() })
         }
         composable("accounts") {
             AccountsScreen(

@@ -14,6 +14,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.mailtabs.app.data.MailRepository
+import com.mailtabs.app.settings.AppSettings
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -37,13 +38,21 @@ class WorkScheduler @Inject constructor(@ApplicationContext private val ctx: Con
             .enqueueUniqueWork("actions_$accountId", ExistingWorkPolicy.APPEND_OR_REPLACE, req)
     }
 
-    /** Подстраховка к IMAP IDLE: периодическая синхронизация входящих. */
+    /** Режим «Каждые 15 минут»: периодическая синхронизация входящих (только при наличии сети). */
     fun schedulePeriodic() {
         val req = PeriodicWorkRequestBuilder<SyncWorker>(15, TimeUnit.MINUTES)
             .setConstraints(network)
             .build()
         WorkManager.getInstance(ctx)
-            .enqueueUniquePeriodicWork("periodic_sync", ExistingPeriodicWorkPolicy.KEEP, req)
+            .enqueueUniquePeriodicWork(PERIODIC, ExistingPeriodicWorkPolicy.KEEP, req)
+    }
+
+    fun cancelPeriodic() {
+        WorkManager.getInstance(ctx).cancelUniqueWork(PERIODIC)
+    }
+
+    private companion object {
+        const val PERIODIC = "periodic_sync"
     }
 }
 
@@ -73,9 +82,11 @@ class SyncWorker @AssistedInject constructor(
     @Assisted ctx: Context,
     @Assisted params: WorkerParameters,
     private val repo: MailRepository,
+    private val settings: AppSettings,
 ) : CoroutineWorker(ctx, params) {
     override suspend fun doWork(): Result {
-        for (account in repo.allAccounts()) {
+        val s = settings.current()
+        for (account in repo.allAccounts().filter { s.notifyFor(it.id) }) {
             runCatching { repo.syncFolder(account.id, "INBOX", notify = true) }
         }
         return Result.success()

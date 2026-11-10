@@ -16,96 +16,123 @@ import com.mailtabs.app.MainActivity
 import com.mailtabs.app.R
 import com.mailtabs.app.data.db.AccountEntity
 import com.mailtabs.app.data.db.MessageEntity
+import com.mailtabs.app.settings.AppSettings
+import com.mailtabs.app.settings.Strings
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class Notifier @Inject constructor(@ApplicationContext private val ctx: Context) {
+class Notifier @Inject constructor(
+    @ApplicationContext private val ctx: Context,
+    private val strings: Strings,
+    private val settings: AppSettings,
+) {
 
+    /** Создаёт/обновляет каналы. Повторный вызов обновляет названия под текущий язык. */
     fun createChannels() {
         val nm = ctx.getSystemService(NotificationManager::class.java)
+        // Каналы версии 0.1 (важность канала после создания поменять нельзя).
+        for (old in listOf("new_mail", "push_service")) runCatching { nm.deleteNotificationChannel(old) }
         nm.createNotificationChannel(
-            NotificationChannel(CH_MAIL, "Новые письма", NotificationManager.IMPORTANCE_HIGH)
+            NotificationChannel(CH_MAIL, strings.get(R.string.channel_mail), NotificationManager.IMPORTANCE_DEFAULT).apply {
+                description = strings.get(R.string.channel_mail_desc)
+            }
         )
         nm.createNotificationChannel(
-            NotificationChannel(CH_SERVICE, "Push-соединение", NotificationManager.IMPORTANCE_MIN).apply {
+            NotificationChannel(CH_SYNC, strings.get(R.string.channel_sync), NotificationManager.IMPORTANCE_MIN).apply {
+                description = strings.get(R.string.channel_sync_desc)
                 setShowBadge(false)
-                description = "Постоянное уведомление сервиса IMAP IDLE"
+                setSound(null, null)
+                enableVibration(false)
+                enableLights(false)
+                lockscreenVisibility = Notification.VISIBILITY_SECRET
             }
         )
     }
 
-    fun serviceNotification(accounts: Int): Notification =
-        NotificationCompat.Builder(ctx, CH_SERVICE)
+    /** Служебное уведомление foreground-сервиса: тихое, без времени и счётчиков. */
+    fun serviceNotification(): Notification =
+        NotificationCompat.Builder(ctx, CH_SYNC)
             .setSmallIcon(R.drawable.ic_stat_mail)
-            .setContentTitle("Ожидание новых писем")
-            .setContentText(if (accounts == 1) "1 ящик на связи" else "Ящиков на связи: $accounts")
+            .setContentTitle(strings.get(R.string.sync_notification_title))
             .setOngoing(true)
+            .setSilent(true)
+            .setShowWhen(false)
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .setContentIntent(openIntent(null))
+            .setVisibility(NotificationCompat.VISIBILITY_SECRET)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_DEFERRED)
+            .setContentIntent(openIntent(null, null))
             .build()
 
     fun notifyNew(account: AccountEntity, messages: List<MessageEntity>) {
-        if (messages.isEmpty()) return
-        if (Build.VERSION.SDK_INT >= 33 &&
-            ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) return
+        if (messages.isEmpty() || !settings.cached.notifyFor(account.id)) return
+        if (!canPost()) return
         val nm = NotificationManagerCompat.from(ctx)
-        val group = "account_${account.id}"
-        val pi = openIntent(account.id)
+        val group = group(account.id)
         try {
             for (m in messages.sortedBy { it.date }.takeLast(5)) {
                 val sender = m.fromName.ifBlank { m.fromAddress }
+                val subject = m.subject.ifBlank { strings.get(R.string.no_subject) }
                 val n = NotificationCompat.Builder(ctx, CH_MAIL)
                     .setSmallIcon(R.drawable.ic_stat_mail)
                     .setSubText(account.name)
                     .setContentTitle(sender)
-                    .setContentText(m.subject.ifBlank { "(без темы)" })
-                    .setStyle(
-                        NotificationCompat.BigTextStyle()
-                            .bigText("${m.subject}\n${m.preview}".trim())
-                    )
+                    .setContentText(subject)
+                    .setStyle(NotificationCompat.BigTextStyle().bigText("$subject\n${m.preview}".trim()))
                     .setWhen(m.date)
+                    .setShowWhen(true)
                     .setGroup(group)
                     .setAutoCancel(true)
                     .setCategory(NotificationCompat.CATEGORY_EMAIL)
-                    .setContentIntent(pi)
+                    .setContentIntent(openIntent(account.id, null))
                     .build()
-                nm.notify("${account.id}:${m.uid}".hashCode(), n)
+                nm.notify(TAG_MESSAGE, m.id.toInt(), n)
             }
             val summary = NotificationCompat.Builder(ctx, CH_MAIL)
                 .setSmallIcon(R.drawable.ic_stat_mail)
                 .setSubText(account.name)
                 .setContentTitle(account.name)
-                .setContentText("Новые письма")
+                .setContentText(strings.get(R.string.notification_new_mail))
                 .setGroup(group)
                 .setGroupSummary(true)
                 .setAutoCancel(true)
-                .setContentIntent(pi)
+                .setContentIntent(openIntent(account.id, null))
                 .build()
-            nm.notify(("summary" + account.id).hashCode(), summary)
+            nm.notify(TAG_SUMMARY, account.id.toInt(), summary)
         } catch (_: SecurityException) {
         }
     }
 
-    private fun openIntent(accountId: Long?): PendingIntent {
+    private fun canPost(): Boolean =
+        Build.VERSION.SDK_INT < 33 ||
+            ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+
+    private fun group(accountId: Long) = "account_$accountId"
+
+    private fun openIntent(accountId: Long?, messageId: Long?): PendingIntent {
         val intent = Intent(ctx, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
             if (accountId != null) putExtra(MainActivity.EXTRA_ACCOUNT_ID, accountId)
+            if (messageId != null) putExtra(MainActivity.EXTRA_MESSAGE_ID, messageId)
+        }
+        val requestCode = when {
+            messageId != null -> (messageId * 4).toInt()
+            accountId != null -> -(accountId * 4 + 1).toInt()
+            else -> 0
         }
         return PendingIntent.getActivity(
-            ctx,
-            accountId?.toInt() ?: 0,
-            intent,
+            ctx, requestCode, intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
     }
 
     companion object {
-        const val CH_MAIL = "new_mail"
-        const val CH_SERVICE = "push_service"
+        const val CH_MAIL = "mail"
+        const val CH_SYNC = "background_sync"
         const val SERVICE_NOTIFICATION_ID = 1
+        private const val TAG_MESSAGE = "msg"
+        private const val TAG_SUMMARY = "summary"
     }
 }

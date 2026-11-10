@@ -7,7 +7,9 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mailtabs.app.R
 import com.mailtabs.app.data.MailRepository
+import com.mailtabs.app.settings.Strings
 import com.mailtabs.app.data.OutgoingMail
 import com.mailtabs.app.data.db.AccountEntity
 import com.mailtabs.app.data.mail.MailParser
@@ -24,6 +26,7 @@ import javax.inject.Inject
 class ComposeViewModel @Inject constructor(
     saved: SavedStateHandle,
     private val repo: MailRepository,
+    private val strings: Strings,
 ) : ViewModel() {
 
     private val mode: String = saved.get<String>("mode") ?: "new"
@@ -42,13 +45,14 @@ class ComposeViewModel @Inject constructor(
     var sent by mutableStateOf(false)
         private set
     var error by mutableStateOf<String?>(null)
-    var forwardNote by mutableStateOf("")
+    /** Показать подсказку «вложения будут пересланы». */
+    var forwardNote by mutableStateOf(false)
         private set
 
     val title = when (mode) {
-        "reply", "replyAll" -> "Ответ"
-        "forward" -> "Пересылка"
-        else -> "Новое письмо"
+        "reply", "replyAll" -> R.string.compose_reply
+        "forward" -> R.string.compose_forward
+        else -> R.string.compose_new
     }
 
     private var inReplyTo: String? = null
@@ -66,7 +70,7 @@ class ComposeViewModel @Inject constructor(
         runCatching { repo.loadBody(refId) }
         val m = repo.getMessage(refId) ?: return
         val original = m.bodyText?.takeIf { it.isNotBlank() } ?: m.bodyHtml?.let { MailParser.htmlToText(it) } ?: ""
-        val date = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(m.date))
+        val date = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, strings.locale()).format(Date(m.date))
         val sender = if (m.fromName.isNotBlank()) "${m.fromName} <${m.fromAddress}>" else m.fromAddress
         when (mode) {
             "reply", "replyAll" -> {
@@ -81,14 +85,15 @@ class ComposeViewModel @Inject constructor(
                 subject = prefixed("Re: ", m.subject)
                 inReplyTo = m.messageIdHeader
                 references = listOfNotNull(m.refsHeader, m.messageIdHeader).joinToString(" ").ifBlank { null }
-                body = "\n\n$date, $sender:\n" + original.lines().joinToString("\n") { "> $it" }
+                body = "\n\n" + strings.get(R.string.quote_header, date, sender) + "\n" +
+                    original.lines().joinToString("\n") { "> $it" }
             }
             "forward" -> {
                 subject = prefixed("Fwd: ", m.subject)
                 forwardOf = m.id
-                if (m.hasAttachments) forwardNote = "Вложения исходного письма будут пересланы."
-                body = "\n\n---------- Пересланное сообщение ----------\n" +
-                    "От: $sender\nДата: $date\nТема: ${m.subject}\nКому: ${m.toList}\n\n$original"
+                if (m.hasAttachments) forwardNote = true
+                body = "\n\n" + strings.get(R.string.forward_header, sender, date, m.subject, m.toList) +
+                    "\n\n$original"
             }
         }
     }
@@ -102,8 +107,8 @@ class ComposeViewModel @Inject constructor(
 
     fun send() {
         if (sending) return
-        if (fromId <= 0) { error = "Выберите ящик-отправитель"; return }
-        if (to.isBlank()) { error = "Укажите получателя"; return }
+        if (fromId <= 0) { error = strings.get(R.string.err_choose_sender); return }
+        if (to.isBlank()) { error = strings.get(R.string.err_specify_recipient); return }
         sending = true
         viewModelScope.launch {
             try {
@@ -115,7 +120,7 @@ class ComposeViewModel @Inject constructor(
                 )
                 sent = true
             } catch (e: Exception) {
-                error = e.message ?: "Не удалось отправить"
+                error = e.message ?: strings.get(R.string.err_send)
             } finally {
                 sending = false
             }

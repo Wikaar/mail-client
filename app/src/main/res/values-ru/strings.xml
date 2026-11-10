@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Общее -->
+    <string name="back">Назад</string>
+    <string name="cancel">Отмена</string>
+    <string name="delete">Удалить</string>
+    <string name="delete_count">Удалить (%1$d)</string>
+    <string name="create">Создать</string>
+    <string name="rename">Переименовать</string>
+    <string name="name">Название</string>
+    <string name="more">Ещё</string>
+    <string name="undo">Отменить</string>
+    <string name="loading">Загрузка…</string>
+    <string name="no_subject">(без темы)</string>
+    <string name="no_sender">(без отправителя)</string>
+    <string name="attachments">Вложения</string>
+
+    <!-- Главный экран -->
+    <string name="folders">Папки</string>
+    <string name="account_menu">Меню ящика</string>
+    <string name="compose">Написать</string>
+    <string name="menu_folder">Папка: %1$s</string>
+    <string name="filter_only_important">Только важные</string>
+    <string name="subtitle_only_important">%1$s · ★ только важные</string>
+    <string name="mark_all_read">Пометить все прочитанными</string>
+    <string name="delete_all">Удалить все письма</string>
+    <string name="manage_accounts">Управление ящиками</string>
+    <string name="delete_all_title">Удалить все письма?</string>
+    <string name="delete_all_counting">Подсчёт писем…</string>
+    <plurals name="delete_all_text">
+        <item quantity="one">Ящик «%1$s», папка «%2$s»: %3$d письмо.</item>
+        <item quantity="few">Ящик «%1$s», папка «%2$s»: %3$d письма.</item>
+        <item quantity="many">Ящик «%1$s», папка «%2$s»: %3$d писем.</item>
+        <item quantity="other">Ящик «%1$s», папка «%2$s»: %3$d письма.</item>
+    </plurals>
+    <string name="delete_all_permanent">Они будут удалены безвозвратно.</string>
+    <string name="delete_all_to_trash">Они будут перемещены в Корзину.</string>
+    <string name="no_accounts_title">Нет почтовых ящиков</string>
+    <string name="no_accounts_text">Добавьте ящик IONOS, Яндекс или любой другой с IMAP/SMTP. Каждый ящик будет отдельной вкладкой.</string>
+    <string name="add_account">Добавить ящик</string>
+
+    <!-- Список писем -->
+    <string name="no_messages">Писем нет</string>
+    <string name="no_important_messages">Важных писем нет</string>
+    <string name="message_deleted">Письмо удалено</string>
+    <string name="mark_important">Пометить как важное</string>
+    <string name="unmark_important">Снять пометку «Важное»</string>
+    <string name="move_to_folder">Переместить в папку</string>
+
+    <!-- Папки -->
+    <string name="folder_inbox">Входящие</string>
+    <string name="folder_sent">Отправленные</string>
+    <string name="folder_drafts">Черновики</string>
+    <string name="folder_trash">Корзина</string>
+    <string name="folder_spam">Спам</string>
+    <string name="folder_archive">Архив</string>
+    <string name="folders_loading">Папки загружаются…</string>
+    <string name="new_folder">Новая папка</string>
+    <string name="new_folder_in">Новая папка в «%1$s»</string>
+    <string name="rename_folder">Переименовать папку</string>
+    <string name="delete_folder_title">Удалить папку?</string>
+    <string name="delete_folder_text">Папка «%1$s» и все письма в ней будут удалены на сервере.</string>
+    <string name="folder_actions">Действия с папкой</string>
+    <string name="create_subfolder">Создать вложенную</string>
+
+    <!-- Экран письма -->
+    <string name="reply">Ответить</string>
+    <string name="reply_all">Ответить всем</string>
+    <string name="forward">Переслать</string>
+    <string name="move">Переместить</string>
+    <string name="mark_unread">Пометить непрочитанным</string>
+    <string name="header_to">Кому: %1$s</string>
+    <string name="header_cc">Копия: %1$s</string>
+    <string name="loading_message">Загрузка письма…</string>
+    <string name="show_images">Показать изображения</string>
+    <string name="saved_to_downloads">Сохранено в «Загрузки»: %1$s</string>
+    <string name="size_bytes">%1$d Б</string>
+    <string name="size_kb">%1$d КБ</string>
+    <string name="size_mb">%1$s МБ</string>
+
+    <!-- Новое письмо -->
+    <string name="compose_new">Новое письмо</string>
+    <string name="compose_reply">Ответ</string>
+    <string name="compose_forward">Пересылка</string>
+    <string name="send">Отправить</string>
+    <string name="field_from">От</string>
+    <string name="field_to">Кому</string>
+    <string name="field_cc">Копия</string>
+    <string name="field_subject">Тема</string>
+    <string name="field_body">Сообщение</string>
+    <string name="forward_attachments_note">Вложения исходного письма будут пересланы.</string>
+    <string name="quote_header">%1$s, %2$s:</string>
+    <string name="forward_header">---------- Пересланное сообщение ----------\nОт: %1$s\nДата: %2$s\nТема: %3$s\nКому: %4$s</string>
+
+    <!-- Ящики -->
+    <string name="accounts_title">Почтовые ящики</string>
+    <string name="delete_account">Удалить ящик</string>
+    <string name="delete_account_title">Удалить ящик?</string>
+    <string name="delete_account_text">Ящик «%1$s» и его локальные письма будут удалены с устройства. На сервере ничего не изменится.</string>
+    <string name="account_settings">Настройки ящика</string>
+    <string name="new_account">Новый ящик</string>
+    <string name="provider">Провайдер</string>
+    <string name="preset_yandex">Яндекс</string>
+    <string name="preset_custom">Другой</string>
+    <string name="preset_yandex_hint">Для Яндекса нужен пароль приложения (id.yandex.ru → Безопасность → Пароли приложений) и включённый доступ по IMAP в настройках почты.</string>
+    <string name="tab_name">Название вкладки</string>
+    <string name="email_address">Адрес почты</string>
+    <string name="sender_name">Имя отправителя</string>
+    <string name="login_hint">Логин (по умолчанию — адрес)</string>
+    <string name="password">Пароль</string>
+    <string name="password_keep">Пароль (пусто — не менять)</string>
+    <string name="incoming_imap">Входящая почта (IMAP)</string>
+    <string name="outgoing_smtp">Исходящая почта (SMTP)</string>
+    <string name="server">Сервер</string>
+    <string name="port">Порт</string>
+    <string name="security_none">Нет</string>
+    <string name="save_sent_copy">Сохранять копию в «Отправленные»</string>
+    <string name="checking_connection">Проверка подключения…</string>
+    <string name="check_and_save">Проверить и сохранить</string>
+
+    <!-- Настройки -->
+    <string name="settings_title">Настройки</string>
+    <string name="settings_theme">Тема</string>
+    <string name="theme_light">Светлая</string>
+    <string name="theme_dark">Тёмная</string>
+    <string name="theme_system">Как в системе</string>
+    <string name="settings_language">Язык</string>
+    <string name="language_system">Как в системе</string>
+    <string name="settings_notifications">Уведомления</string>
+    <string name="notifications_enabled">Уведомления о новых письмах</string>
+    <string name="notifications_per_account">Для каждого ящика</string>
+    <string name="notifications_permission_missing">Уведомления для приложения запрещены.</string>
+    <string name="notifications_allow">Разрешить</string>
+    <string name="sync_mode">Режим получения</string>
+    <string name="sync_mode_instant">Мгновенно</string>
+    <string name="sync_mode_instant_desc">Постоянное соединение (IMAP IDLE) в фоновом сервисе</string>
+    <string name="sync_mode_periodic">Каждые 15 минут</string>
+    <string name="sync_mode_periodic_desc">Периодическая проверка при наличии сети, без фонового сервиса</string>
+    <string name="hide_service_notification">Скрыть служебное уведомление</string>
+    <string name="hide_service_notification_hint">Выключите этот канал — синхронизация продолжит работать, уведомление исчезнет.</string>
+    <string name="settings_about">О приложении</string>
+    <string name="about_version">Версия %1$s (%2$d)</string>
+    <string name="about_author">Автор: %1$s</string>
+
+    <!-- Уведомления -->
+    <string name="channel_mail">Новые письма</string>
+    <string name="channel_mail_desc">Уведомления о новых письмах</string>
+    <string name="channel_sync">Фоновая синхронизация</string>
+    <string name="channel_sync_desc">Тихое служебное уведомление мгновенного получения почты</string>
+    <string name="sync_notification_title">Синхронизация почты</string>
+    <string name="notification_new_mail">Новые письма</string>
+    <plurals name="new_messages">
+        <item quantity="one">%1$d новое письмо</item>
+        <item quantity="few">%1$d новых письма</item>
+        <item quantity="many">%1$d новых писем</item>
+        <item quantity="other">%1$d новых письма</item>
+    </plurals>
+    <string name="action_mark_read">Прочитано</string>
+    <string name="action_delete">Удалить</string>
+    <string name="action_read_all">Прочитать все</string>
+
+    <!-- Ошибки -->
+    <string name="err_auth_failed">%1$s: неверный логин или пароль</string>
+    <string name="err_no_connection">%1$s: нет соединения с сервером (%2$s)</string>
+    <string name="err_imap_auth">IMAP: неверный логин или пароль</string>
+    <string name="err_imap_connect">IMAP: не удалось подключиться к %1$s:%2$d (%3$s)</string>
+    <string name="err_smtp_auth">SMTP: неверный логин или пароль</string>
+    <string name="err_smtp_connect">SMTP: не удалось подключиться к %1$s:%2$d (%3$s)</string>
+    <string name="err_smtp_no_connection">SMTP: нет соединения (%1$s)</string>
+    <string name="err_enter_password">Введите пароль</string>
+    <string name="err_enter_email">Укажите адрес почты</string>
+    <string name="err_enter_imap">Укажите IMAP-сервер и порт</string>
+    <string name="err_enter_smtp">Укажите SMTP-сервер и порт</string>
+    <string name="err_folder_exists">Папка «%1$s» уже существует</string>
+    <string name="err_folder_not_created">Сервер не создал папку «%1$s»</string>
+    <string name="err_folder_not_renamed">Сервер не переименовал папку</string>
+    <string name="err_folder_not_deleted">Сервер не удалил папку</string>
+    <string name="err_message_not_on_server">Письмо не найдено на сервере</string>
+    <string name="err_message_not_found">Письмо не найдено</string>
+    <string name="err_attachment_not_found">Вложение не найдено</string>
+    <string name="err_account_not_found">Ящик не найден</string>
+    <string name="err_save_file">Не удалось сохранить файл</string>
+    <string name="err_specify_recipient">Укажите получателя</string>
+    <string name="err_bad_address">Неверный адрес: %1$s</string>
+    <string name="err_choose_sender">Выберите ящик-отправитель</string>
+    <string name="err_send">Не удалось отправить</string>
+    <string name="err_load_message">Не удалось загрузить письмо</string>
+    <string name="err_download_attachment">Не удалось скачать вложение</string>
+</resources>

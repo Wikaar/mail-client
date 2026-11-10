@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.MailTabs" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:windowBackground">@android:color/white</item>
-    </style>
+    <!-- AppCompat DayNight: тема приложения переключается через AppCompatDelegate.setDefaultNightMode. -->
+    <style name="Theme.MailTabs" parent="Theme.AppCompat.DayNight.NoActionBar" />
 </resources>

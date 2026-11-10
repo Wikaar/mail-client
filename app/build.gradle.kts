@@ -33,6 +33,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     packaging {
         resources {
@@ -78,4 +79,7 @@ dependencies {
     implementation(libs.android.mail)
     implementation(libs.android.activation)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.webkit)
 }

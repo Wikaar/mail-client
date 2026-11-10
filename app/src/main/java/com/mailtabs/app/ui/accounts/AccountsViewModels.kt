@@ -1,14 +1,18 @@
 package com.mailtabs.app.ui.accounts
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mailtabs.app.R
 import com.mailtabs.app.data.MailRepository
 import com.mailtabs.app.data.db.AccountEntity
 import com.mailtabs.app.data.db.Security
+import com.mailtabs.app.push.SyncController
+import com.mailtabs.app.settings.Strings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -17,29 +21,31 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class AccountsViewModel @Inject constructor(private val repo: MailRepository) : ViewModel() {
+class AccountsViewModel @Inject constructor(
+    private val repo: MailRepository,
+    private val syncController: SyncController,
+) : ViewModel() {
     val accounts: StateFlow<List<AccountEntity>> =
         repo.accounts.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     fun delete(id: Long) {
-        viewModelScope.launch { repo.deleteAccount(id) }
+        viewModelScope.launch {
+            repo.deleteAccount(id)
+            runCatching { syncController.apply() }
+        }
     }
 }
 
 enum class Preset(
-    val title: String,
+    @StringRes val title: Int,
     val imapHost: String, val imapPort: Int,
     val smtpHost: String, val smtpPort: Int,
     val saveSentCopy: Boolean,
-    val hint: String,
+    @StringRes val hint: Int,
 ) {
-    IONOS("IONOS", "imap.ionos.de", 993, "smtp.ionos.de", 465, true, ""),
-    YANDEX(
-        "Яндекс", "imap.yandex.ru", 993, "smtp.yandex.ru", 465, false,
-        "Для Яндекса нужен пароль приложения (id.yandex.ru → Безопасность → Пароли приложений) " +
-            "и включённый доступ по IMAP в настройках почты.",
-    ),
-    CUSTOM("Другой", "", 993, "", 465, true, ""),
+    IONOS(R.string.preset_ionos, "imap.ionos.de", 993, "smtp.ionos.de", 465, true, 0),
+    YANDEX(R.string.preset_yandex, "imap.yandex.ru", 993, "smtp.yandex.ru", 465, false, R.string.preset_yandex_hint),
+    CUSTOM(R.string.preset_custom, "", 993, "", 465, true, 0),
 }
 
 data class AccountForm(
@@ -62,6 +68,8 @@ data class AccountForm(
 class AccountEditViewModel @Inject constructor(
     saved: SavedStateHandle,
     private val repo: MailRepository,
+    private val strings: Strings,
+    private val syncController: SyncController,
 ) : ViewModel() {
 
     val editId: Long = saved.get<Long>("accountId") ?: -1L
@@ -93,7 +101,7 @@ class AccountEditViewModel @Inject constructor(
             imapHost = p.imapHost, imapPort = p.imapPort.toString(), imapSecurity = Security.SSL,
             smtpHost = p.smtpHost, smtpPort = p.smtpPort.toString(), smtpSecurity = Security.SSL,
             saveSentCopy = p.saveSentCopy,
-            name = form.name.ifBlank { p.title },
+            name = form.name.ifBlank { strings.get(p.title) },
         )
     }
 
@@ -102,10 +110,10 @@ class AccountEditViewModel @Inject constructor(
         val imapPort = f.imapPort.toIntOrNull()
         val smtpPort = f.smtpPort.toIntOrNull()
         error = when {
-            f.email.isBlank() || !f.email.contains('@') -> "Укажите адрес почты"
-            f.imapHost.isBlank() || imapPort == null -> "Укажите IMAP-сервер и порт"
-            f.smtpHost.isBlank() || smtpPort == null -> "Укажите SMTP-сервер и порт"
-            !isEdit && f.password.isEmpty() -> "Введите пароль"
+            f.email.isBlank() || !f.email.contains('@') -> strings.get(R.string.err_enter_email)
+            f.imapHost.isBlank() || imapPort == null -> strings.get(R.string.err_enter_imap)
+            f.smtpHost.isBlank() || smtpPort == null -> strings.get(R.string.err_enter_smtp)
+            !isEdit && f.password.isEmpty() -> strings.get(R.string.err_enter_password)
             else -> null
         }
         if (error != null || imapPort == null || smtpPort == null) return
@@ -124,6 +132,7 @@ class AccountEditViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 repo.saveAccount(draft, f.password)
+                runCatching { syncController.apply() }
                 done = true
             } catch (e: Exception) {
                 error = e.message ?: e.toString()

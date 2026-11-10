@@ -61,6 +61,13 @@ import com.mailtabs.app.data.db.MessageEntity
 import com.mailtabs.app.ui.main.Avatar
 import com.mailtabs.app.ui.main.MoveToFolderDialog
 import com.mailtabs.app.ui.main.StarToggle
+import com.mailtabs.app.ui.main.currentLocale
+import com.mailtabs.app.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.graphics.toArgb
+import androidx.webkit.WebSettingsCompat
+import androidx.webkit.WebViewFeature
 import java.text.DateFormat
 import java.util.Date
 
@@ -87,7 +94,7 @@ fun MessageScreen(
                 MessageEvent.Close -> onBack()
                 is MessageEvent.Error -> snackbar.showSnackbar(e.text)
                 is MessageEvent.OpenFile -> {
-                    snackbar.showSnackbar("Сохранено в «Загрузки»: ${e.name}")
+                    snackbar.showSnackbar(context.getString(R.string.saved_to_downloads, e.name))
                     val intent = Intent(Intent.ACTION_VIEW)
                         .setDataAndType(e.uri, e.mime)
                         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -105,7 +112,7 @@ fun MessageScreen(
             TopAppBar(
                 title = {},
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Назад") }
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
                 },
                 actions = {
                     val m = message
@@ -116,27 +123,27 @@ fun MessageScreen(
                             modifier = Modifier.padding(horizontal = 8.dp),
                         )
                         IconButton(onClick = { onReply(m.accountId, m.id, false) }) {
-                            Icon(Icons.Default.Reply, "Ответить")
+                            Icon(Icons.Default.Reply, stringResource(R.string.reply))
                         }
                         IconButton(onClick = { onForward(m.accountId, m.id) }) {
-                            Icon(Icons.Default.Forward, "Переслать")
+                            Icon(Icons.Default.Forward, stringResource(R.string.forward))
                         }
                         IconButton(onClick = { showMove = true }) {
-                            Icon(Icons.Default.DriveFileMove, "Переместить")
+                            Icon(Icons.Default.DriveFileMove, stringResource(R.string.move))
                         }
                         IconButton(onClick = vm::delete) {
-                            Icon(Icons.Default.Delete, "Удалить")
+                            Icon(Icons.Default.Delete, stringResource(R.string.delete))
                         }
                         Box {
-                            IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, "Ещё") }
+                            IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, stringResource(R.string.more)) }
                             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                                 DropdownMenuItem(
-                                    text = { Text("Ответить всем") },
+                                    text = { Text(stringResource(R.string.reply_all)) },
                                     leadingIcon = { Icon(Icons.Default.ReplyAll, null) },
                                     onClick = { menu = false; onReply(m.accountId, m.id, true) },
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Пометить непрочитанным") },
+                                    text = { Text(stringResource(R.string.mark_unread)) },
                                     leadingIcon = { Icon(Icons.Default.MarkEmailUnread, null) },
                                     onClick = { menu = false; vm.markUnreadAndClose() },
                                 )
@@ -186,7 +193,7 @@ fun MessageScreen(
 @Composable
 private fun Header(m: MessageEntity) {
     Column(Modifier.padding(16.dp)) {
-        Text(m.subject.ifBlank { "(без темы)" }, style = MaterialTheme.typography.titleLarge)
+        Text(m.subject.ifBlank { stringResource(R.string.no_subject) }, style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.padding(6.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Avatar(m.fromName.ifBlank { m.fromAddress }, m.fromAddress)
@@ -200,14 +207,14 @@ private fun Header(m: MessageEntity) {
                 )
             }
             Text(
-                DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(m.date)),
+                DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, currentLocale()).format(Date(m.date)),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         if (m.toList.isNotBlank()) {
             Text(
-                "Кому: ${m.toList}",
+                stringResource(R.string.header_to, m.toList),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
@@ -216,7 +223,7 @@ private fun Header(m: MessageEntity) {
         }
         if (m.ccList.isNotBlank()) {
             Text(
-                "Копия: ${m.ccList}",
+                stringResource(R.string.header_cc, m.ccList),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
@@ -232,19 +239,26 @@ private fun Body(m: MessageEntity, modifier: Modifier) {
     val text = m.bodyText
     if (html == null && text == null) {
         Box(modifier.fillMaxWidth().padding(24.dp)) {
-            Text("Загрузка письма…", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.loading_message), color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         return
     }
     // Внешние картинки по умолчанию не грузим (трекинг-пиксели).
     var showImages by remember(m.id) { mutableStateOf(false) }
     val hasRemote = html != null && Regex("(?i)<img[^>]+src=[\"']?https?://").containsMatchIn(html)
-    val document = remember(html, text) { buildDocument(html, text) }
+    // Тёмная тема: простой текст красим цветами темы, HTML затемняет сам WebView (Android 13+).
+    val dark = isSystemInDarkTheme()
+    val darkening = remember { WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING) }
+    val surface = MaterialTheme.colorScheme.surface.toArgb()
+    val onSurface = MaterialTheme.colorScheme.onSurface.toArgb()
+    val textColors = if (dark && html == null) onSurface to surface else null
+    val document = remember(html, text, textColors) { buildDocument(html, text, textColors) }
+    val background = if (html != null && dark && !darkening) android.graphics.Color.WHITE else surface
 
     Column(modifier) {
         if (hasRemote && !showImages) {
             TextButton(onClick = { showImages = true }, modifier = Modifier.padding(horizontal = 8.dp)) {
-                Text("Показать изображения")
+                Text(stringResource(R.string.show_images))
             }
         }
         AndroidView(
@@ -258,6 +272,7 @@ private fun Body(m: MessageEntity, modifier: Modifier) {
                     settings.useWideViewPort = true
                     settings.builtInZoomControls = true
                     settings.displayZoomControls = false
+                    if (darkening) WebSettingsCompat.setAlgorithmicDarkeningAllowed(settings, true)
                     webViewClient = object : WebViewClient() {
                         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                             openExternal(view, request.url)
@@ -267,6 +282,7 @@ private fun Body(m: MessageEntity, modifier: Modifier) {
                 }
             },
             update = { wv ->
+                wv.setBackgroundColor(background)
                 wv.settings.blockNetworkImage = !showImages
                 wv.settings.blockNetworkLoads = !showImages
                 val key = "${m.id}:${document.hashCode()}:$showImages"
@@ -286,19 +302,27 @@ private fun openExternal(view: WebView, uri: Uri) {
     }
 }
 
-private fun buildDocument(html: String?, text: String?): String {
-    val head = "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" +
+/** @param textColors цвета (текст, фон) ARGB для простого текста в тёмной теме. */
+private fun buildDocument(html: String?, text: String?, textColors: Pair<Int, Int>?): String {
+    val colors = textColors?.let { (fg, bg) ->
+        "html,body{color:${cssColor(fg)};background:${cssColor(bg)};}a{color:#8ab4f8;}"
+    } ?: ""
+    val scheme = if (textColors != null) "<meta name=\"color-scheme\" content=\"dark\">" else ""
+    val head = "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">$scheme" +
         "<style>body{font-family:sans-serif;margin:12px;word-wrap:break-word;}img{max-width:100%;height:auto;}" +
-        "pre{white-space:pre-wrap;font-family:sans-serif;}</style>"
+        "pre{white-space:pre-wrap;font-family:sans-serif;}$colors</style>"
     if (html != null) return "<html><head>$head</head><body>$html</body></html>"
     val escaped = (text ?: "")
         .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     return "<html><head>$head</head><body><pre>$escaped</pre></body></html>"
 }
 
+private fun cssColor(argb: Int) = String.format("#%06X", argb and 0xFFFFFF)
+
+@Composable
 private fun formatSize(bytes: Long): String = when {
     bytes <= 0 -> "?"
-    bytes < 1024 -> "$bytes Б"
-    bytes < 1024 * 1024 -> "${bytes / 1024} КБ"
-    else -> String.format("%.1f МБ", bytes / 1024.0 / 1024.0)
+    bytes < 1024 -> stringResource(R.string.size_bytes, bytes)
+    bytes < 1024 * 1024 -> stringResource(R.string.size_kb, bytes / 1024)
+    else -> stringResource(R.string.size_mb, String.format(currentLocale(), "%.1f", bytes / 1024.0 / 1024.0))
 }

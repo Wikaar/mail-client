@@ -1,9 +1,11 @@
 package com.mailtabs.app.ui.main
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mailtabs.app.R
 import com.mailtabs.app.data.MailRepository
 import com.mailtabs.app.data.db.FolderEntity
 import com.mailtabs.app.data.db.FolderRole
@@ -153,12 +155,13 @@ class AccountViewModel @AssistedInject constructor(
 fun accountViewModel(accountId: Long): AccountViewModel =
     hiltViewModel<AccountViewModel, AccountViewModel.Factory>(key = "account_$accountId") { it.create(accountId) }
 
+@Composable
 fun folderTitle(f: FolderEntity?, fallback: String): String = when (f?.role) {
-    FolderRole.INBOX -> "Входящие"
-    FolderRole.SENT -> "Отправленные"
-    FolderRole.DRAFTS -> "Черновики"
-    FolderRole.TRASH -> "Корзина"
-    FolderRole.SPAM -> "Спам"
-    FolderRole.ARCHIVE -> "Архив"
-    else -> f?.name ?: if (fallback == "INBOX") "Входящие" else fallback
+    FolderRole.INBOX -> stringResource(R.string.folder_inbox)
+    FolderRole.SENT -> stringResource(R.string.folder_sent)
+    FolderRole.DRAFTS -> stringResource(R.string.folder_drafts)
+    FolderRole.TRASH -> stringResource(R.string.folder_trash)
+    FolderRole.SPAM -> stringResource(R.string.folder_spam)
+    FolderRole.ARCHIVE -> stringResource(R.string.folder_archive)
+    else -> f?.name ?: if (fallback == "INBOX") stringResource(R.string.folder_inbox) else fallback
 }

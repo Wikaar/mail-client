@@ -8,6 +8,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import androidx.core.content.FileProvider
 import androidx.room.withTransaction
+import com.mailtabs.app.R
 import com.mailtabs.app.data.crypto.PasswordCipher
 import com.mailtabs.app.data.db.AccountEntity
 import com.mailtabs.app.data.db.ActionType
@@ -22,6 +23,7 @@ import com.mailtabs.app.data.mail.ImapOps
 import com.mailtabs.app.data.mail.MailParser
 import com.mailtabs.app.data.mail.MailSessions
 import com.mailtabs.app.push.Notifier
+import com.mailtabs.app.settings.Strings
 import com.mailtabs.app.work.WorkScheduler
 import com.sun.mail.imap.IMAPFolder
 import com.sun.mail.imap.IMAPStore
@@ -77,6 +79,7 @@ class MailRepository @Inject constructor(
     private val cipher: PasswordCipher,
     private val scheduler: WorkScheduler,
     private val notifier: Notifier,
+    private val strings: Strings,
 ) {
     private val accountDao = db.accountDao()
     private val folderDao = db.folderDao()
@@ -118,9 +121,9 @@ class MailRepository @Inject constructor(
         val store = try {
             MailSessions.connectImap(account, password(account), readTimeoutMs)
         } catch (e: AuthenticationFailedException) {
-            throw MailException("${account.name}: неверный логин или пароль", e)
+            throw MailException(strings.get(R.string.err_auth_failed, account.name), e)
         } catch (e: MessagingException) {
-            throw MailException("${account.name}: нет соединения с сервером (${e.message})", e)
+            throw MailException(strings.get(R.string.err_no_connection, account.name, e.message.orEmpty()), e)
         }
         try {
             block(store)
@@ -138,16 +141,16 @@ class MailRepository @Inject constructor(
         try {
             MailSessions.connectImap(account, password, 30_000).close()
         } catch (e: AuthenticationFailedException) {
-            throw MailException("IMAP: неверный логин или пароль", e)
+            throw MailException(strings.get(R.string.err_imap_auth), e)
         } catch (e: Exception) {
-            throw MailException("IMAP: не удалось подключиться к ${account.imapHost}:${account.imapPort} (${e.message})", e)
+            throw MailException(strings.get(R.string.err_imap_connect, account.imapHost, account.imapPort, e.message.orEmpty()), e)
         }
         try {
             MailSessions.connectSmtp(account, password).close()
         } catch (e: AuthenticationFailedException) {
-            throw MailException("SMTP: неверный логин или пароль", e)
+            throw MailException(strings.get(R.string.err_smtp_auth), e)
         } catch (e: Exception) {
-            throw MailException("SMTP: не удалось подключиться к ${account.smtpHost}:${account.smtpPort} (${e.message})", e)
+            throw MailException(strings.get(R.string.err_smtp_connect, account.smtpHost, account.smtpPort, e.message.orEmpty()), e)
         }
     }
 
@@ -158,7 +161,7 @@ class MailRepository @Inject constructor(
     suspend fun saveAccount(draft: AccountEntity, plainPassword: String): Long {
         val existing = if (draft.id > 0) accountDao.get(draft.id) else null
         val password = plainPassword.ifEmpty {
-            existing?.let { password(it) } ?: throw MailException("Введите пароль")
+            existing?.let { password(it) } ?: throw MailException(strings.get(R.string.err_enter_password))
         }
         testConnection(draft, password)
         val entity = draft.copy(
@@ -218,8 +221,8 @@ class MailRepository @Inject constructor(
                 "$parent$sep$name"
             }
             val f = store.getFolder(full)
-            if (f.exists()) throw MailException("Папка «$name» уже существует")
-            if (!f.create(Folder.HOLDS_MESSAGES)) throw MailException("Сервер не создал папку «$name»")
+            if (f.exists()) throw MailException(strings.get(R.string.err_folder_exists, name))
+            if (!f.create(Folder.HOLDS_MESSAGES)) throw MailException(strings.get(R.string.err_folder_not_created, name))
             f.setSubscribed(true)
         }
         syncFolders(accountId)
@@ -231,7 +234,7 @@ class MailRepository @Inject constructor(
             val f = store.getFolder(fullName)
             val sep = f.separator
             val newFull = if (fullName.contains(sep)) fullName.substringBeforeLast(sep) + sep + newName else newName
-            if (!f.renameTo(store.getFolder(newFull))) throw MailException("Сервер не переименовал папку")
+            if (!f.renameTo(store.getFolder(newFull))) throw MailException(strings.get(R.string.err_folder_not_renamed))
         }
         messageDao.deleteFolder(accountId, fullName)
         syncFolders(accountId)
@@ -241,7 +244,7 @@ class MailRepository @Inject constructor(
         val account = accountDao.get(accountId) ?: return
         withStore(account) { store ->
             val f = store.getFolder(fullName)
-            if (f.exists() && !f.delete(true)) throw MailException("Сервер не удалил папку")
+            if (f.exists() && !f.delete(true)) throw MailException(strings.get(R.string.err_folder_not_deleted))
         }
         messageDao.deleteFolder(accountId, fullName)
         folderDao.delete(accountId, fullName)
@@ -329,15 +332,20 @@ class MailRepository @Inject constructor(
             val minUid = serverUids.minOrNull() ?: 0L
             val removed = local.keys.filter { it >= minUid && it !in serverUids }
 
-            db.withTransaction {
+            val rowIds = db.withTransaction {
                 removed.chunked(500).forEach { messageDao.deleteUids(accountId, folderName, it) }
                 for ((uid, seen, flagged) in flagChanges) messageDao.updateFlags(accountId, folderName, uid, seen, flagged)
                 messageDao.insertAll(newOnes.map { it.second })
             }
+            // Настоящие id строк Room — нужны уведомлениям (кнопки и переход к письму).
+            val inserted = newOnes.mapIndexedNotNull { i, (m, e) ->
+                val id = rowIds.getOrNull(i) ?: -1L
+                if (id > 0) m to e.copy(id = id) else null
+            }
 
             // Второй проход: превью текста (заголовки уже видны в списке).
-            val withPreview = ArrayList<MessageEntity>(newOnes.size)
-            for ((m, e) in newOnes.sortedByDescending { it.second.date }) {
+            val withPreview = ArrayList<MessageEntity>(inserted.size)
+            for ((m, e) in inserted.sortedByDescending { it.second.date }) {
                 val preview = runCatching { MailParser.preview(m) }.getOrDefault("")
                 val hasAtt = e.hasAttachments || MailParser.hasAttachments(m)
                 messageDao.setPreview(accountId, folderName, e.uid, preview, hasAtt)
@@ -382,7 +390,7 @@ class MailRepository @Inject constructor(
             val f = store.getFolder(msg.folder) as IMAPFolder
             f.open(Folder.READ_ONLY)
             try {
-                val m = f.getMessageByUID(msg.uid) ?: throw MailException("Письмо не найдено на сервере")
+                val m = f.getMessageByUID(msg.uid) ?: throw MailException(strings.get(R.string.err_message_not_on_server))
                 val parsed = MailParser.parse(m)
                 val refs = runCatching { m.getHeader("References")?.firstOrNull() }.getOrNull()
                 db.withTransaction {
@@ -399,14 +407,14 @@ class MailRepository @Inject constructor(
     }
 
     suspend fun downloadAttachment(attachmentId: Long): Pair<Uri, String> {
-        val att = attachmentDao.get(attachmentId) ?: throw MailException("Вложение не найдено")
-        val msg = messageDao.get(att.messageId) ?: throw MailException("Письмо не найдено")
-        val account = accountDao.get(msg.accountId) ?: throw MailException("Ящик не найден")
+        val att = attachmentDao.get(attachmentId) ?: throw MailException(strings.get(R.string.err_attachment_not_found))
+        val msg = messageDao.get(att.messageId) ?: throw MailException(strings.get(R.string.err_message_not_found))
+        val account = accountDao.get(msg.accountId) ?: throw MailException(strings.get(R.string.err_account_not_found))
         val uri = withStore(account) { store ->
             val f = store.getFolder(msg.folder) as IMAPFolder
             f.open(Folder.READ_ONLY)
             try {
-                val m = f.getMessageByUID(msg.uid) ?: throw MailException("Письмо не найдено на сервере")
+                val m = f.getMessageByUID(msg.uid) ?: throw MailException(strings.get(R.string.err_message_not_on_server))
                 val part = MailParser.findPart(m, att.partPath)
                 part.inputStream.use { saveToDownloads(att.fileName, att.mimeType, it) }
             } finally {
@@ -426,7 +434,7 @@ class MailRepository @Inject constructor(
                 put(MediaStore.Downloads.IS_PENDING, 1)
             }
             val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                ?: throw MailException("Не удалось сохранить файл")
+                ?: throw MailException(strings.get(R.string.err_save_file))
             resolver.openOutputStream(uri)!!.use { input.copyTo(it) }
             values.clear()
             values.put(MediaStore.Downloads.IS_PENDING, 0)
@@ -473,8 +481,16 @@ class MailRepository @Inject constructor(
     fun unhideAll(accountId: Long) = scope.launch { messageDao.unhideAll(accountId) }
 
     /** Удалить письмо: в Корзину, а из самой Корзины — окончательно. */
-    fun deleteMessage(messageId: Long) = scope.launch {
-        val m = messageDao.get(messageId) ?: return@launch
+    fun deleteMessage(messageId: Long) = scope.launch { deleteMessageNow(messageId) }
+
+    /** Отметить письмо прочитанным (кнопка «Прочитано» в уведомлении). */
+    suspend fun markRead(messageId: Long) {
+        val m = messageDao.get(messageId) ?: return
+        setSeen(m, true)
+    }
+
+    suspend fun deleteMessageNow(messageId: Long) {
+        val m = messageDao.get(messageId) ?: return
         val inTrash = folderDao.get(m.accountId, m.folder)?.role == FolderRole.TRASH
         val action = if (inTrash) {
             PendingActionEntity(accountId = m.accountId, type = ActionType.DELETE_PERMANENT, folder = m.folder, uid = m.uid)
@@ -561,13 +577,13 @@ class MailRepository @Inject constructor(
     // ---------- Отправка ----------
 
     suspend fun send(mail: OutgoingMail) = withContext(Dispatchers.IO) {
-        val account = accountDao.get(mail.accountId) ?: throw MailException("Ящик не найден")
+        val account = accountDao.get(mail.accountId) ?: throw MailException(strings.get(R.string.err_account_not_found))
         val pwd = password(account)
         val session = MailSessions.smtpSession(account)
         val mime = MimeMessage(session)
         mime.setFrom(InternetAddress(account.email, account.senderName.ifBlank { null }, "UTF-8"))
         val to = parseAddresses(mail.to)
-        if (to.isEmpty()) throw MailException("Укажите получателя")
+        if (to.isEmpty()) throw MailException(strings.get(R.string.err_specify_recipient))
         mime.setRecipients(Message.RecipientType.TO, to)
         parseAddresses(mail.cc).takeIf { it.isNotEmpty() }?.let { mime.setRecipients(Message.RecipientType.CC, it) }
         mime.setSubject(mail.subject, "UTF-8")
@@ -589,9 +605,9 @@ class MailRepository @Inject constructor(
         val transport = try {
             MailSessions.connectSmtp(account, pwd, session)
         } catch (e: AuthenticationFailedException) {
-            throw MailException("SMTP: неверный логин или пароль", e)
+            throw MailException(strings.get(R.string.err_smtp_auth), e)
         } catch (e: MessagingException) {
-            throw MailException("SMTP: нет соединения (${e.message})", e)
+            throw MailException(strings.get(R.string.err_smtp_no_connection, e.message.orEmpty()), e)
         }
         try {
             transport.sendMessage(mime, mime.allRecipients)
@@ -615,7 +631,7 @@ class MailRepository @Inject constructor(
         return try {
             InternetAddress.parse(cleaned, false)
         } catch (e: Exception) {
-            throw MailException("Неверный адрес: $s")
+            throw MailException(strings.get(R.string.err_bad_address, s))
         }
     }
 

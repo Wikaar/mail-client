@@ -26,7 +26,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Attachment
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.MarkEmailRead
 import androidx.compose.material.icons.filled.MarkEmailUnread
 import androidx.compose.material.icons.filled.Star
@@ -60,15 +59,18 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mailtabs.app.R
 import com.mailtabs.app.data.db.FolderEntity
 import com.mailtabs.app.data.db.MessageListItem
 import kotlinx.coroutines.flow.first
@@ -77,6 +79,8 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.absoluteValue
 
@@ -91,9 +95,12 @@ fun AccountPage(
     val refreshing by vm.refreshing.collectAsStateWithLifecycle()
     val folders by vm.folders.collectAsStateWithLifecycle()
     val folderName by vm.folderName.collectAsStateWithLifecycle()
+    val onlyFlagged by vm.onlyFlagged.collectAsStateWithLifecycle()
     val error by vm.error.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var moveFor by remember { mutableStateOf<Long?>(null) }
+    val deletedText = stringResource(R.string.message_deleted)
+    val undoText = stringResource(R.string.undo)
 
     LaunchedEffect(error) {
         error?.let {
@@ -115,7 +122,13 @@ fun AccountPage(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            if (refreshing) "Загрузка…" else "Писем нет",
+                            stringResource(
+                                when {
+                                    refreshing -> R.string.loading
+                                    onlyFlagged -> R.string.no_important_messages
+                                    else -> R.string.no_messages
+                                }
+                            ),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -144,8 +157,8 @@ fun AccountPage(
                                 var undone = false
                                 try {
                                     undone = snackbar.showSnackbar(
-                                        message = "Письмо удалено",
-                                        actionLabel = "Отменить",
+                                        message = deletedText,
+                                        actionLabel = undoText,
                                         duration = SnackbarDuration.Short,
                                     ) == SnackbarResult.ActionPerformed
                                 } finally {
@@ -169,6 +182,9 @@ fun AccountPage(
     }
 }
 
+/** Порог срабатывания свайпа — доля ширины строки. */
+private const val SWIPE_THRESHOLD = 0.38f
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SwipeableMessageRow(
@@ -190,11 +206,12 @@ private fun SwipeableMessageRow(
     state = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
             when (value) {
+                // Справа налево — в Корзину: строка уезжает и плавно исчезает из списка.
                 SwipeToDismissBoxValue.EndToStart -> { delete(); true }
+                // Слева направо — прочитано/непрочитано: строка пружинисто возвращается.
                 SwipeToDismissBoxValue.StartToEnd -> {
                     toggle()
                     scope.launch {
-                        // Дожидаемся, пока строка вернётся, и даём пружинистый overshoot.
                         snapshotFlow { state.offsetOrZero() }.first { abs(it) < 2f }
                         bounce.animateTo(
                             targetValue = 0f,
@@ -247,7 +264,7 @@ private fun SwipeableMessageRow(
                     Icon(
                         icon,
                         contentDescription = null,
-                        tint = Color.White,
+                        tint = if (offset < 0f) Color.White else MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.graphicsLayer {
                             scaleX = iconScale
                             scaleY = iconScale
@@ -264,8 +281,6 @@ private fun SwipeableMessageRow(
     }
 }
 
-private const val SWIPE_THRESHOLD = 0.38f
-
 @OptIn(ExperimentalMaterial3Api::class)
 private fun SwipeToDismissBoxState.offsetOrZero(): Float =
     runCatching { requireOffset() }.getOrDefault(0f).let { if (it.isNaN()) 0f else it }
@@ -274,13 +289,14 @@ private fun SwipeToDismissBoxState.offsetOrZero(): Float =
 @Composable
 private fun MessageRow(m: MessageListItem, onClick: () -> Unit, onLongClick: () -> Unit, onToggleFlag: () -> Unit) {
     val unread = !m.seen
-    val name = m.fromName.ifBlank { m.fromAddress }.ifBlank { "(без отправителя)" }
+    val name = m.fromName.ifBlank { m.fromAddress }.ifBlank { stringResource(R.string.no_sender) }
+    val locale = currentLocale()
     Row(
         Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 8.dp),
         verticalAlignment = Alignment.Top,
     ) {
         Avatar(name, m.fromAddress)
@@ -297,21 +313,22 @@ private fun MessageRow(m: MessageListItem, onClick: () -> Unit, onLongClick: () 
                 )
                 if (m.hasAttachments) {
                     Icon(
-                        Icons.Default.Attachment, contentDescription = "Вложения",
+                        Icons.Default.Attachment, contentDescription = stringResource(R.string.attachments),
                         modifier = Modifier.size(16.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.width(4.dp))
                 }
                 Text(
-                    formatTime(m.date),
+                    formatTime(m.date, locale),
+                    modifier = Modifier.padding(end = 8.dp),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = if (unread) FontWeight.Bold else FontWeight.Normal,
                     color = if (unread) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Text(
-                m.subject.ifBlank { "(без темы)" },
+                m.subject.ifBlank { stringResource(R.string.no_subject) },
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = if (unread) FontWeight.Bold else FontWeight.Normal,
                 maxLines = 1,
@@ -344,16 +361,16 @@ fun StarToggle(flagged: Boolean, onToggle: () -> Unit, modifier: Modifier = Modi
     )
     Box(
         modifier
-            .size(32.dp)
+            .size(36.dp)
             .clip(CircleShape)
             .clickable(onClick = onToggle),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             if (flagged) Icons.Default.Star else Icons.Default.StarBorder,
-            contentDescription = if (flagged) "Снять пометку «Важное»" else "Пометить как важное",
+            contentDescription = stringResource(if (flagged) R.string.unmark_important else R.string.mark_important),
             tint = if (flagged) StarColor else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(20.dp).graphicsLayer { scaleX = scale; scaleY = scale },
+            modifier = Modifier.size(22.dp).graphicsLayer { scaleX = scale; scaleY = scale },
         )
     }
 }
@@ -375,19 +392,20 @@ fun Avatar(name: String, address: String, size: Int = 40) {
     }
 }
 
-private val timeFmt = DateTimeFormatter.ofPattern("HH:mm")
-private val dayFmt = DateTimeFormatter.ofPattern("d MMM")
-private val yearFmt = DateTimeFormatter.ofPattern("dd.MM.yy")
+/** Локаль, выбранная в приложении (per-app language). */
+@Composable
+fun currentLocale(): Locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
 
-fun formatTime(epochMs: Long): String {
+/** Время письма в списке: сегодня — время, в этом году — день и месяц, иначе — короткая дата. */
+fun formatTime(epochMs: Long, locale: Locale): String {
     if (epochMs <= 0) return ""
     val zone = ZoneId.systemDefault()
     val dt = Instant.ofEpochMilli(epochMs).atZone(zone)
     val today = LocalDate.now(zone)
     return when {
-        dt.toLocalDate() == today -> dt.format(timeFmt)
-        dt.year == today.year -> dt.format(dayFmt)
-        else -> dt.format(yearFmt)
+        dt.toLocalDate() == today -> dt.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale))
+        dt.year == today.year -> dt.format(DateTimeFormatter.ofPattern("d MMM", locale))
+        else -> dt.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).withLocale(locale))
     }
 }
 
@@ -399,7 +417,7 @@ fun MoveToFolderDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Переместить в папку") },
+        title = { Text(stringResource(R.string.move_to_folder)) },
         text = {
             LazyColumn(Modifier.heightIn(max = 420.dp), verticalArrangement = Arrangement.spacedBy(0.dp)) {
                 items(folders, key = { it.fullName }) { f ->
@@ -414,9 +432,6 @@ fun MoveToFolderDialog(
             }
         },
         confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
-
-@Suppress("unused")
-private val defaultFolderIcon = Icons.Default.Folder

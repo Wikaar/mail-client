@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Allgemein -->
+    <string name="back">Zurück</string>
+    <string name="cancel">Abbrechen</string>
+    <string name="delete">Löschen</string>
+    <string name="delete_count">Löschen (%1$d)</string>
+    <string name="create">Erstellen</string>
+    <string name="rename">Umbenennen</string>
+    <string name="name">Name</string>
+    <string name="more">Mehr</string>
+    <string name="undo">Rückgängig</string>
+    <string name="loading">Wird geladen…</string>
+    <string name="no_subject">(kein Betreff)</string>
+    <string name="no_sender">(kein Absender)</string>
+    <string name="attachments">Anhänge</string>
+
+    <!-- Hauptbildschirm -->
+    <string name="folders">Ordner</string>
+    <string name="account_menu">Postfachmenü</string>
+    <string name="compose">Schreiben</string>
+    <string name="menu_folder">Ordner: %1$s</string>
+    <string name="filter_only_important">Nur wichtige</string>
+    <string name="subtitle_only_important">%1$s · ★ nur wichtige</string>
+    <string name="mark_all_read">Alle als gelesen markieren</string>
+    <string name="delete_all">Alle Nachrichten löschen</string>
+    <string name="manage_accounts">Postfächer verwalten</string>
+    <string name="delete_all_title">Alle Nachrichten löschen?</string>
+    <string name="delete_all_counting">Nachrichten werden gezählt…</string>
+    <plurals name="delete_all_text">
+        <item quantity="one">Postfach „%1$s“, Ordner „%2$s“: %3$d Nachricht.</item>
+        <item quantity="other">Postfach „%1$s“, Ordner „%2$s“: %3$d Nachrichten.</item>
+    </plurals>
+    <string name="delete_all_permanent">Sie werden endgültig gelöscht.</string>
+    <string name="delete_all_to_trash">Sie werden in den Papierkorb verschoben.</string>
+    <string name="no_accounts_title">Keine Postfächer</string>
+    <string name="no_accounts_text">Füge ein Postfach von IONOS, Yandex oder ein beliebiges anderes mit IMAP/SMTP hinzu. Jedes Postfach bekommt einen eigenen Tab.</string>
+    <string name="add_account">Postfach hinzufügen</string>
+
+    <!-- Nachrichtenliste -->
+    <string name="no_messages">Keine Nachrichten</string>
+    <string name="no_important_messages">Keine wichtigen Nachrichten</string>
+    <string name="message_deleted">Nachricht gelöscht</string>
+    <string name="mark_important">Als wichtig markieren</string>
+    <string name="unmark_important">Markierung „Wichtig“ entfernen</string>
+    <string name="move_to_folder">In Ordner verschieben</string>
+
+    <!-- Ordner -->
+    <string name="folder_inbox">Posteingang</string>
+    <string name="folder_sent">Gesendet</string>
+    <string name="folder_drafts">Entwürfe</string>
+    <string name="folder_trash">Papierkorb</string>
+    <string name="folder_spam">Spam</string>
+    <string name="folder_archive">Archiv</string>
+    <string name="folders_loading">Ordner werden geladen…</string>
+    <string name="new_folder">Neuer Ordner</string>
+    <string name="new_folder_in">Neuer Ordner in „%1$s“</string>
+    <string name="rename_folder">Ordner umbenennen</string>
+    <string name="delete_folder_title">Ordner löschen?</string>
+    <string name="delete_folder_text">Der Ordner „%1$s“ und alle Nachrichten darin werden auf dem Server gelöscht.</string>
+    <string name="folder_actions">Ordneraktionen</string>
+    <string name="create_subfolder">Unterordner erstellen</string>
+
+    <!-- Nachricht -->
+    <string name="reply">Antworten</string>
+    <string name="reply_all">Allen antworten</string>
+    <string name="forward">Weiterleiten</string>
+    <string name="move">Verschieben</string>
+    <string name="mark_unread">Als ungelesen markieren</string>
+    <string name="header_to">An: %1$s</string>
+    <string name="header_cc">Cc: %1$s</string>
+    <string name="loading_message">Nachricht wird geladen…</string>
+    <string name="show_images">Bilder anzeigen</string>
+    <string name="saved_to_downloads">In „Downloads“ gespeichert: %1$s</string>
+    <string name="size_bytes">%1$d B</string>
+    <string name="size_kb">%1$d KB</string>
+    <string name="size_mb">%1$s MB</string>
+
+    <!-- Verfassen -->
+    <string name="compose_new">Neue Nachricht</string>
+    <string name="compose_reply">Antwort</string>
+    <string name="compose_forward">Weiterleitung</string>
+    <string name="send">Senden</string>
+    <string name="field_from">Von</string>
+    <string name="field_to">An</string>
+    <string name="field_cc">Cc</string>
+    <string name="field_subject">Betreff</string>
+    <string name="field_body">Nachricht</string>
+    <string name="forward_attachments_note">Die Anhänge der ursprünglichen Nachricht werden weitergeleitet.</string>
+    <string name="quote_header">Am %1$s schrieb %2$s:</string>
+    <string name="forward_header">---------- Weitergeleitete Nachricht ----------\nVon: %1$s\nDatum: %2$s\nBetreff: %3$s\nAn: %4$s</string>
+
+    <!-- Postfächer -->
+    <string name="accounts_title">Postfächer</string>
+    <string name="delete_account">Postfach löschen</string>
+    <string name="delete_account_title">Postfach löschen?</string>
+    <string name="delete_account_text">Das Postfach „%1$s“ und seine lokalen Nachrichten werden vom Gerät entfernt. Auf dem Server ändert sich nichts.</string>
+    <string name="account_settings">Postfach-Einstellungen</string>
+    <string name="new_account">Neues Postfach</string>
+    <string name="provider">Anbieter</string>
+    <string name="preset_yandex">Yandex</string>
+    <string name="preset_custom">Anderer</string>
+    <string name="preset_yandex_hint">Yandex benötigt ein App-Passwort (id.yandex.com → Sicherheit → App-Passwörter) und aktivierten IMAP-Zugriff in den Mail-Einstellungen.</string>
+    <string name="tab_name">Tab-Name</string>
+    <string name="email_address">E-Mail-Adresse</string>
+    <string name="sender_name">Absendername</string>
+    <string name="login_hint">Benutzername (standardmäßig die Adresse)</string>
+    <string name="password">Passwort</string>
+    <string name="password_keep">Passwort (leer — unverändert)</string>
+    <string name="incoming_imap">Posteingangsserver (IMAP)</string>
+    <string name="outgoing_smtp">Postausgangsserver (SMTP)</string>
+    <string name="server">Server</string>
+    <string name="port">Port</string>
+    <string name="security_none">Keine</string>
+    <string name="save_sent_copy">Kopie in „Gesendet“ speichern</string>
+    <string name="checking_connection">Verbindung wird geprüft…</string>
+    <string name="check_and_save">Prüfen und speichern</string>
+
+    <!-- Einstellungen -->
+    <string name="settings_title">Einstellungen</string>
+    <string name="settings_theme">Design</string>
+    <string name="theme_light">Hell</string>
+    <string name="theme_dark">Dunkel</string>
+    <string name="theme_system">Systemstandard</string>
+    <string name="settings_language">Sprache</string>
+    <string name="language_system">Systemstandard</string>
+    <string name="settings_notifications">Benachrichtigungen</string>
+    <string name="notifications_enabled">Benachrichtigungen über neue Nachrichten</string>
+    <string name="notifications_per_account">Pro Postfach</string>
+    <string name="notifications_permission_missing">Benachrichtigungen sind für die App nicht erlaubt.</string>
+    <string name="notifications_allow">Erlauben</string>
+    <string name="sync_mode">Abrufmodus</string>
+    <string name="sync_mode_instant">Sofort</string>
+    <string name="sync_mode_instant_desc">Dauerhafte Verbindung (IMAP IDLE) in einem Hintergrunddienst</string>
+    <string name="sync_mode_periodic">Alle 15 Minuten</string>
+    <string name="sync_mode_periodic_desc">Regelmäßige Prüfung bei Netzverbindung, ohne Hintergrunddienst</string>
+    <string name="hide_service_notification">Dienstbenachrichtigung ausblenden</string>
+    <string name="hide_service_notification_hint">Schalte diesen Kanal aus — die Synchronisierung läuft weiter, die Benachrichtigung verschwindet.</string>
+    <string name="settings_about">Über die App</string>
+    <string name="about_version">Version %1$s (%2$d)</string>
+    <string name="about_author">Autor: %1$s</string>
+
+    <!-- Benachrichtigungen -->
+    <string name="channel_mail">Neue Nachrichten</string>
+    <string name="channel_mail_desc">Benachrichtigungen über neue Nachrichten</string>
+    <string name="channel_sync">Hintergrund-Synchronisierung</string>
+    <string name="channel_sync_desc">Stille Dienstbenachrichtigung des Sofortabrufs</string>
+    <string name="sync_notification_title">E-Mail-Synchronisierung</string>
+    <string name="notification_new_mail">Neue Nachrichten</string>
+    <plurals name="new_messages">
+        <item quantity="one">%1$d neue Nachricht</item>
+        <item quantity="other">%1$d neue Nachrichten</item>
+    </plurals>
+    <string name="action_mark_read">Gelesen</string>
+    <string name="action_delete">Löschen</string>
+    <string name="action_read_all">Alle gelesen</string>
+
+    <!-- Fehler -->
+    <string name="err_auth_failed">%1$s: falscher Benutzername oder falsches Passwort</string>
+    <string name="err_no_connection">%1$s: keine Verbindung zum Server (%2$s)</string>
+    <string name="err_imap_auth">IMAP: falscher Benutzername oder falsches Passwort</string>
+    <string name="err_imap_connect">IMAP: Verbindung zu %1$s:%2$d fehlgeschlagen (%3$s)</string>
+    <string name="err_smtp_auth">SMTP: falscher Benutzername oder falsches Passwort</string>
+    <string name="err_smtp_connect">SMTP: Verbindung zu %1$s:%2$d fehlgeschlagen (%3$s)</string>
+    <string name="err_smtp_no_connection">SMTP: keine Verbindung (%1$s)</string>
+    <string name="err_enter_password">Passwort eingeben</string>
+    <string name="err_enter_email">E-Mail-Adresse eingeben</string>
+    <string name="err_enter_imap">IMAP-Server und Port eingeben</string>
+    <string name="err_enter_smtp">SMTP-Server und Port eingeben</string>
+    <string name="err_folder_exists">Der Ordner „%1$s“ existiert bereits</string>
+    <string name="err_folder_not_created">Der Server hat den Ordner „%1$s“ nicht erstellt</string>
+    <string name="err_folder_not_renamed">Der Server hat den Ordner nicht umbenannt</string>
+    <string name="err_folder_not_deleted">Der Server hat den Ordner nicht gelöscht</string>
+    <string name="err_message_not_on_server">Nachricht auf dem Server nicht gefunden</string>
+    <string name="err_message_not_found">Nachricht nicht gefunden</string>
+    <string name="err_attachment_not_found">Anhang nicht gefunden</string>
+    <string name="err_account_not_found">Postfach nicht gefunden</string>
+    <string name="err_save_file">Datei konnte nicht gespeichert werden</string>
+    <string name="err_specify_recipient">Empfänger angeben</string>
+    <string name="err_bad_address">Ungültige Adresse: %1$s</string>
+    <string name="err_choose_sender">Absender-Postfach auswählen</string>
+    <string name="err_send">Senden fehlgeschlagen</string>
+    <string name="err_load_message">Nachricht konnte nicht geladen werden</string>
+    <string name="err_download_attachment">Anhang konnte nicht heruntergeladen werden</string>
+</resources>
