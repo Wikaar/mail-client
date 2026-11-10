@@ -21,7 +21,7 @@ class SettingsViewModel @Inject constructor(
     private val settings: AppSettings,
     private val syncController: SyncController,
     repo: MailRepository,
-) : ViewModel() {
+) : ViewModel(), SettingsActions {
 
     val state: StateFlow<SettingsState> =
         settings.state.stateIn(viewModelScope, SharingStarted.Eagerly, settings.cached)
@@ -29,32 +29,41 @@ class SettingsViewModel @Inject constructor(
     val accounts: StateFlow<List<AccountEntity>> =
         repo.accounts.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    fun setTheme(theme: ThemeMode) {
+    override fun setTheme(theme: ThemeMode) {
         viewModelScope.launch {
             settings.setTheme(theme)
             AppSettings.applyNightMode(theme)
         }
     }
 
-    fun setLanguage(tag: String) {
+    override fun setLanguage(tag: String) {
         viewModelScope.launch {
             settings.setLanguage(tag)
             AppSettings.applyLanguage(tag)
         }
     }
 
-    fun setNotificationsEnabled(enabled: Boolean) = updateSync { settings.setNotificationsEnabled(enabled) }
+    override fun setNotificationsEnabled(enabled: Boolean) = updateSync { settings.setNotificationsEnabled(enabled) }
 
-    fun setAccountNotifications(accountId: Long, enabled: Boolean) =
+    override fun setAccountNotifications(accountId: Long, enabled: Boolean) =
         updateSync { settings.setAccountNotifications(accountId, enabled) }
 
-    fun setSyncMode(mode: SyncMode) = updateSync { settings.setSyncMode(mode) }
+    override fun setSyncMode(mode: SyncMode) = updateSync { settings.setSyncMode(mode) }
 
     /** Сохраняет настройку и сразу останавливает/запускает нужный механизм получения писем. */
-    private fun updateSync(block: suspend () -> Unit) {
+    private fun updateSync(block: suspend () -> Unit): Unit {
         viewModelScope.launch {
             block()
             runCatching { syncController.apply(startService = true) }
         }
     }
+}
+
+/** Действия экрана настроек (реализует [SettingsViewModel]). */
+interface SettingsActions {
+    fun setTheme(theme: ThemeMode)
+    fun setLanguage(tag: String)
+    fun setNotificationsEnabled(enabled: Boolean)
+    fun setAccountNotifications(accountId: Long, enabled: Boolean)
+    fun setSyncMode(mode: SyncMode)
 }

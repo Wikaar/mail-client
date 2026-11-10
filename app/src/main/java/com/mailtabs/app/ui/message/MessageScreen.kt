@@ -191,7 +191,7 @@ fun MessageScreen(
 }
 
 @Composable
-private fun Header(m: MessageEntity) {
+internal fun Header(m: MessageEntity) {
     Column(Modifier.padding(16.dp)) {
         Text(m.subject.ifBlank { stringResource(R.string.no_subject) }, style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.padding(6.dp))

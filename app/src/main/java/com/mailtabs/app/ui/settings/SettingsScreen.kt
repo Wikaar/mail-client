@@ -62,7 +62,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mailtabs.app.BuildConfig
 import com.mailtabs.app.R
 import com.mailtabs.app.push.Notifier
+import com.mailtabs.app.data.db.AccountEntity
 import com.mailtabs.app.settings.AppSettings
+import com.mailtabs.app.settings.SettingsState
 import com.mailtabs.app.settings.SyncMode
 import com.mailtabs.app.settings.ThemeMode
 
@@ -73,6 +75,26 @@ private const val REPO_URL = "https://github.com/Wikaar/mail-client"
 fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     val accounts by vm.accounts.collectAsStateWithLifecycle()
+    SettingsContent(
+        state = state,
+        accounts = accounts,
+        currentLanguage = remember(state.language) { AppSettings.currentLanguage() },
+        onBack = onBack,
+        actions = vm,
+    )
+}
+
+/** Экран настроек без ViewModel: состояние и обработчики приходят снаружи. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun SettingsContent(
+    state: SettingsState,
+    accounts: List<AccountEntity>,
+    currentLanguage: String,
+    onBack: () -> Unit,
+    actions: SettingsActions,
+) {
+    val vm = actions
     val context = LocalContext.current
 
     var hasPermission by remember { mutableStateOf(hasNotificationPermission(context)) }
@@ -129,7 +151,6 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = hiltViewModel()) 
 
             // ---------- Язык ----------
             SectionTitle(stringResource(R.string.settings_language))
-            val currentLanguage = remember(state.language) { AppSettings.currentLanguage() }
             Column(Modifier.selectableGroup()) {
                 AppSettings.LANGUAGES.forEach { tag ->
                     RadioRow(languageName(tag), selected = currentLanguage == tag) { vm.setLanguage(tag) }

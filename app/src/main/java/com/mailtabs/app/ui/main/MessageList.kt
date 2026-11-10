@@ -187,7 +187,7 @@ private const val SWIPE_THRESHOLD = 0.38f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SwipeableMessageRow(
+internal fun SwipeableMessageRow(
     m: MessageListItem,
     onClick: () -> Unit,
     onLongClick: () -> Unit,

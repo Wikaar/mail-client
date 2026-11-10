@@ -1,0 +1,32 @@
+name: Screenshots
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [screenshots]
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # Рендер экранов на демо-данных (Roborazzi + Robolectric), без эмулятора.
+      - name: Record screenshots
+        run: |
+          chmod +x gradlew
+          ./gradlew recordRoborazziDebug --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: app/build/outputs/roborazzi/*.png
+          if-no-files-found: warn

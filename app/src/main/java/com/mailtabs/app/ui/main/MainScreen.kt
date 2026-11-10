@@ -243,7 +243,7 @@ fun MainScreen(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun AccountTabItem(
+internal fun AccountTabItem(
     tab: AccountTab,
     selected: Boolean,
     onClick: () -> Unit,
@@ -288,9 +288,33 @@ private fun AccountMenu(
     val folder by vm.currentFolder.collectAsStateWithLifecycle()
     val folderName by vm.folderName.collectAsStateWithLifecycle()
     val onlyFlagged by vm.onlyFlagged.collectAsStateWithLifecycle()
+    AccountMenuContent(
+        folderTitle = folderTitle(folder, folderName),
+        onlyFlagged = onlyFlagged,
+        onDismiss = onDismiss,
+        onToggleOnlyFlagged = vm::toggleOnlyFlagged,
+        onMarkAllRead = vm::markAllRead,
+        onDeleteAll = onDeleteAll,
+        onManageAccounts = onManageAccounts,
+        onSettings = onSettings,
+    )
+}
+
+/** Само выпадающее меню вкладки (без ViewModel). */
+@Composable
+internal fun AccountMenuContent(
+    folderTitle: String,
+    onlyFlagged: Boolean,
+    onDismiss: () -> Unit,
+    onToggleOnlyFlagged: () -> Unit,
+    onMarkAllRead: () -> Unit,
+    onDeleteAll: () -> Unit,
+    onManageAccounts: () -> Unit,
+    onSettings: () -> Unit,
+) {
     DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
         Text(
-            stringResource(R.string.menu_folder, folderTitle(folder, folderName)),
+            stringResource(R.string.menu_folder, folderTitle),
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -301,12 +325,12 @@ private fun AccountMenu(
                 Icon(Icons.Default.Star, null, tint = if (onlyFlagged) StarColor else LocalContentColor.current)
             },
             trailingIcon = { Checkbox(checked = onlyFlagged, onCheckedChange = null) },
-            onClick = { vm.toggleOnlyFlagged(); onDismiss() },
+            onClick = { onToggleOnlyFlagged(); onDismiss() },
         )
         DropdownMenuItem(
             text = { Text(stringResource(R.string.mark_all_read)) },
             leadingIcon = { Icon(Icons.Default.DoneAll, null) },
-            onClick = { vm.markAllRead(); onDismiss() },
+            onClick = { onMarkAllRead(); onDismiss() },
         )
         DropdownMenuItem(
             text = { Text(stringResource(R.string.delete_all)) },
@@ -358,7 +382,7 @@ private fun DeleteAllDialog(tab: AccountTab, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun NoAccounts(onAddAccount: () -> Unit, onSettings: () -> Unit) {
+internal fun NoAccounts(onAddAccount: () -> Unit, onSettings: () -> Unit) {
     Column(
         Modifier.fillMaxSize().padding(32.dp),
         verticalArrangement = Arrangement.Center,
