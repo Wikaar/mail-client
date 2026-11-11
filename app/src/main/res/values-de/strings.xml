@@ -86,7 +86,6 @@
     <string name="field_cc">Cc</string>
     <string name="field_subject">Betreff</string>
     <string name="field_body">Nachricht</string>
-    <string name="forward_attachments_note">Die Anhänge der ursprünglichen Nachricht werden weitergeleitet.</string>
     <string name="quote_header">Am %1$s schrieb %2$s:</string>
     <string name="forward_header">---------- Weitergeleitete Nachricht ----------\nVon: %1$s\nDatum: %2$s\nBetreff: %3$s\nAn: %4$s</string>
 
@@ -182,4 +181,18 @@
     <string name="err_send">Senden fehlgeschlagen</string>
     <string name="err_load_message">Nachricht konnte nicht geladen werden</string>
     <string name="err_download_attachment">Anhang konnte nicht heruntergeladen werden</string>
+    <string name="compose_draft">Entwurf</string>
+    <string name="attach">Anhängen</string>
+    <string name="attachment_remove">Anhang entfernen</string>
+    <string name="attachments_total">Anhänge: %1$d, insgesamt %2$s</string>
+    <string name="attachments_loading">Anhänge werden vorbereitet…</string>
+    <string name="attachments_too_big_title">Große Anhänge</string>
+    <string name="attachments_too_big_text">Die Anhänge sind insgesamt %1$s groß, mehr als 20 MB. Viele Mailserver lehnen solche Nachrichten ab. Trotzdem senden?</string>
+    <string name="send_anyway">Trotzdem senden</string>
+    <string name="edit_draft">Entwurf bearbeiten</string>
+    <string name="draft_saved">Entwurf gespeichert</string>
+    <string name="err_attach">%1$s konnte nicht angehängt werden</string>
+    <string name="err_save_draft">Entwurf konnte nicht gespeichert werden: %1$s</string>
+    <string name="err_no_drafts_folder">Das Konto hat keinen Entwürfe-Ordner</string>
+    <string name="exit_without_saving">Verwerfen</string>
 </resources>

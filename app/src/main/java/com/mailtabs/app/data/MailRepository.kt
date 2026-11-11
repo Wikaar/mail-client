@@ -22,13 +22,13 @@ import com.mailtabs.app.data.db.PendingActionEntity
 import com.mailtabs.app.data.mail.ImapOps
 import com.mailtabs.app.data.mail.MailParser
 import com.mailtabs.app.data.mail.MailSessions
+import com.mailtabs.app.data.mail.MimeComposer
 import com.mailtabs.app.push.Notifier
 import com.mailtabs.app.settings.Strings
 import com.mailtabs.app.work.WorkScheduler
 import com.sun.mail.imap.IMAPFolder
 import com.sun.mail.imap.IMAPStore
 import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.activation.DataHandler
 import javax.mail.AuthenticationFailedException
 import javax.mail.FetchProfile
 import javax.mail.Flags
@@ -38,10 +38,7 @@ import javax.mail.Message
 import javax.mail.MessagingException
 import javax.mail.UIDFolder
 import javax.mail.internet.InternetAddress
-import javax.mail.internet.MimeBodyPart
 import javax.mail.internet.MimeMessage
-import javax.mail.internet.MimeMultipart
-import javax.mail.util.ByteArrayDataSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -53,7 +50,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.InputStream
-import java.util.Date
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -69,7 +65,9 @@ data class OutgoingMail(
     val body: String,
     val inReplyTo: String? = null,
     val references: String? = null,
-    val forwardOfMessageId: Long? = null,
+    val attachments: List<ComposeAttachment> = emptyList(),
+    /** Письмо открыто из черновика: после отправки/пересохранения старую версию удалить. */
+    val draftMessageId: Long? = null,
 )
 
 @Singleton
@@ -80,6 +78,7 @@ class MailRepository @Inject constructor(
     private val scheduler: WorkScheduler,
     private val notifier: Notifier,
     private val strings: Strings,
+    private val attachmentStore: ComposeAttachmentStore,
 ) {
     private val accountDao = db.accountDao()
     private val folderDao = db.folderDao()
@@ -574,36 +573,32 @@ class MailRepository @Inject constructor(
         }
     }
 
-    // ---------- Отправка ----------
+    // ---------- Отправка и черновики ----------
+
+    private fun buildMime(account: AccountEntity, mail: OutgoingMail, requireRecipient: Boolean): MimeMessage {
+        val to = parseAddresses(mail.to)
+        if (requireRecipient && to.isEmpty()) throw MailException(strings.get(R.string.err_specify_recipient))
+        mail.attachments.firstOrNull { !it.file.exists() }?.let { throw MailException(strings.get(R.string.err_attach, it.name)) }
+        return MimeComposer.build(
+            session = MailSessions.smtpSession(account),
+            from = InternetAddress(account.email, account.senderName.ifBlank { null }, "UTF-8"),
+            to = to,
+            cc = parseAddresses(mail.cc),
+            subject = mail.subject,
+            body = mail.body,
+            inReplyTo = mail.inReplyTo,
+            references = mail.references,
+            attachments = mail.attachments,
+        )
+    }
 
     suspend fun send(mail: OutgoingMail) = withContext(Dispatchers.IO) {
         val account = accountDao.get(mail.accountId) ?: throw MailException(strings.get(R.string.err_account_not_found))
         val pwd = password(account)
-        val session = MailSessions.smtpSession(account)
-        val mime = MimeMessage(session)
-        mime.setFrom(InternetAddress(account.email, account.senderName.ifBlank { null }, "UTF-8"))
-        val to = parseAddresses(mail.to)
-        if (to.isEmpty()) throw MailException(strings.get(R.string.err_specify_recipient))
-        mime.setRecipients(Message.RecipientType.TO, to)
-        parseAddresses(mail.cc).takeIf { it.isNotEmpty() }?.let { mime.setRecipients(Message.RecipientType.CC, it) }
-        mime.setSubject(mail.subject, "UTF-8")
-        mime.sentDate = Date()
-        mail.inReplyTo?.let { mime.setHeader("In-Reply-To", it) }
-        mail.references?.let { mime.setHeader("References", it) }
-
-        val forwardParts = mail.forwardOfMessageId?.let { collectForwardParts(it) }.orEmpty()
-        if (forwardParts.isEmpty()) {
-            mime.setText(mail.body, "UTF-8")
-        } else {
-            val mp = MimeMultipart()
-            mp.addBodyPart(MimeBodyPart().apply { setText(mail.body, "UTF-8") })
-            forwardParts.forEach { mp.addBodyPart(it) }
-            mime.setContent(mp)
-        }
-        mime.saveChanges()
+        val mime = buildMime(account, mail, requireRecipient = true)
 
         val transport = try {
-            MailSessions.connectSmtp(account, pwd, session)
+            MailSessions.connectSmtp(account, pwd, mime.session)
         } catch (e: AuthenticationFailedException) {
             throw MailException(strings.get(R.string.err_smtp_auth), e)
         } catch (e: MessagingException) {
@@ -622,7 +617,35 @@ class MailRepository @Inject constructor(
                 store.getFolder(sent).appendMessages(arrayOf(mime))
             }
         }
+        // Отправленный черновик больше не нужен.
+        mail.draftMessageId?.let { runCatching { deleteDraft(it) } }
+        attachmentStore.deleteAll(mail.attachments)
         Unit
+    }
+
+    /**
+     * Сохраняет письмо в папку «Черновики» на сервере (флаг \Draft), вместе с вложениями.
+     * Если письмо открыто из черновика, прежняя версия удаляется.
+     */
+    suspend fun saveDraft(mail: OutgoingMail) = withContext(Dispatchers.IO) {
+        val account = accountDao.get(mail.accountId) ?: throw MailException(strings.get(R.string.err_account_not_found))
+        val drafts = folderDao.byRole(account.id, FolderRole.DRAFTS.name)?.fullName
+            ?: throw MailException(strings.get(R.string.err_no_drafts_folder))
+        val mime = buildMime(account, mail, requireRecipient = false)
+        mime.setFlags(Flags().apply { add(Flags.Flag.DRAFT); add(Flags.Flag.SEEN) }, true)
+        withStore(account) { store -> store.getFolder(drafts).appendMessages(arrayOf(mime)) }
+        mail.draftMessageId?.let { runCatching { deleteDraft(it) } }
+        attachmentStore.deleteAll(mail.attachments)
+        scope.launch { runCatching { syncFolder(account.id, drafts) } }
+        Unit
+    }
+
+    /** Удаляет черновик навсегда (не в Корзину). */
+    private suspend fun deleteDraft(messageId: Long) {
+        val m = messageDao.get(messageId) ?: return
+        enqueue(PendingActionEntity(accountId = m.accountId, type = ActionType.DELETE_PERMANENT, folder = m.folder, uid = m.uid))
+        removeLocal(m)
+        scope.launch { runCatching { flushQueue(m.accountId) } }
     }
 
     private fun parseAddresses(s: String): Array<InternetAddress> {
@@ -635,23 +658,21 @@ class MailRepository @Inject constructor(
         }
     }
 
-    private suspend fun collectForwardParts(messageId: Long): List<MimeBodyPart> {
+    /**
+     * Копирует вложения письма с сервера в локальные файлы — для «Переслать»
+     * и для продолжения черновика.
+     */
+    suspend fun copyAttachments(messageId: Long): List<ComposeAttachment> {
         val msg = messageDao.get(messageId) ?: return emptyList()
         val account = accountDao.get(msg.accountId) ?: return emptyList()
         return withStore(account) { store ->
             val f = store.getFolder(msg.folder) as IMAPFolder
             f.open(Folder.READ_ONLY)
             try {
-                val m = f.getMessageByUID(msg.uid) ?: return@withStore emptyList()
-                MailParser.parse(m).attachments.mapNotNull { a ->
-                    runCatching {
-                        val src = MailParser.findPart(m, a.path)
-                        val bytes = src.inputStream.use { it.readBytes() }
-                        MimeBodyPart().apply {
-                            dataHandler = DataHandler(ByteArrayDataSource(bytes, a.mimeType))
-                            fileName = a.fileName
-                        }
-                    }.getOrNull()
+                val m = f.getMessageByUID(msg.uid) ?: throw MailException(strings.get(R.string.err_message_not_on_server))
+                MailParser.parse(m).attachments.map { a ->
+                    val src = MailParser.findPart(m, a.path)
+                    src.inputStream.use { attachmentStore.save(a.fileName, a.mimeType, it) }
                 }
             } finally {
                 runCatching { f.close(false) }

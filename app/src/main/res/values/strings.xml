@@ -88,7 +88,6 @@
     <string name="field_cc">Cc</string>
     <string name="field_subject">Subject</string>
     <string name="field_body">Message</string>
-    <string name="forward_attachments_note">Attachments of the original message will be forwarded.</string>
     <string name="quote_header">On %1$s, %2$s wrote:</string>
     <string name="forward_header">---------- Forwarded message ----------\nFrom: %1$s\nDate: %2$s\nSubject: %3$s\nTo: %4$s</string>
 
@@ -188,4 +187,18 @@
     <string name="err_send">Could not send</string>
     <string name="err_load_message">Could not load the message</string>
     <string name="err_download_attachment">Could not download the attachment</string>
+    <string name="compose_draft">Draft</string>
+    <string name="attach">Attach</string>
+    <string name="attachment_remove">Remove attachment</string>
+    <string name="attachments_total">Attachments: %1$d, total %2$s</string>
+    <string name="attachments_loading">Preparing attachments…</string>
+    <string name="attachments_too_big_title">Large attachments</string>
+    <string name="attachments_too_big_text">Attachments total %1$s, more than 20 MB. Many mail servers reject such messages. Send anyway?</string>
+    <string name="send_anyway">Send anyway</string>
+    <string name="edit_draft">Edit draft</string>
+    <string name="draft_saved">Draft saved</string>
+    <string name="err_attach">Could not attach %1$s</string>
+    <string name="err_save_draft">Could not save the draft: %1$s</string>
+    <string name="err_no_drafts_folder">The account has no Drafts folder</string>
+    <string name="exit_without_saving">Discard</string>
 </resources>

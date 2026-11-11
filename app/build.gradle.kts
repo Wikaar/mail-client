@@ -14,8 +14,8 @@ android {
         applicationId = "com.mailtabs.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 4
+        versionName = "1.2.1"
     }
 
     // Постоянный debug-ключ в репозитории: CI-сборки ставятся поверх друг друга.
@@ -95,4 +95,6 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.webkit)
+
+    testImplementation(libs.junit)
 }

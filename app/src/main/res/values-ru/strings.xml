@@ -88,7 +88,6 @@
     <string name="field_cc">Копия</string>
     <string name="field_subject">Тема</string>
     <string name="field_body">Сообщение</string>
-    <string name="forward_attachments_note">Вложения исходного письма будут пересланы.</string>
     <string name="quote_header">%1$s, %2$s:</string>
     <string name="forward_header">---------- Пересланное сообщение ----------\nОт: %1$s\nДата: %2$s\nТема: %3$s\nКому: %4$s</string>
 
@@ -186,4 +185,18 @@
     <string name="err_send">Не удалось отправить</string>
     <string name="err_load_message">Не удалось загрузить письмо</string>
     <string name="err_download_attachment">Не удалось скачать вложение</string>
+    <string name="compose_draft">Черновик</string>
+    <string name="attach">Прикрепить</string>
+    <string name="attachment_remove">Удалить вложение</string>
+    <string name="attachments_total">Вложений: %1$d, всего %2$s</string>
+    <string name="attachments_loading">Подготовка вложений…</string>
+    <string name="attachments_too_big_title">Большие вложения</string>
+    <string name="attachments_too_big_text">Вложения занимают %1$s — больше 20 МБ. Многие почтовые серверы не принимают такие письма. Всё равно отправить?</string>
+    <string name="send_anyway">Отправить</string>
+    <string name="edit_draft">Редактировать черновик</string>
+    <string name="draft_saved">Черновик сохранён</string>
+    <string name="err_attach">Не удалось прикрепить %1$s</string>
+    <string name="err_save_draft">Не удалось сохранить черновик: %1$s</string>
+    <string name="err_no_drafts_folder">У ящика нет папки «Черновики»</string>
+    <string name="exit_without_saving">Не сохранять</string>
 </resources>

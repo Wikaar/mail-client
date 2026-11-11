@@ -73,6 +73,12 @@ fun AppNav(openTarget: OpenTarget?, onOpenTargetHandled: () -> Unit) {
                     nav.navigate("compose?accountId=$accountId&mode=${if (all) "replyAll" else "reply"}&refId=$id")
                 },
                 onForward = { accountId, id -> nav.navigate("compose?accountId=$accountId&mode=forward&refId=$id") },
+                onEditDraft = { accountId, id ->
+                    // Старая версия черновика будет удалена — экран просмотра закрываем.
+                    nav.navigate("compose?accountId=$accountId&mode=draft&refId=$id") {
+                        popUpTo("message/{messageId}") { inclusive = true }
+                    }
+                },
             )
         }
         composable(

@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.ReplyAll
 import androidx.compose.material.icons.filled.Attachment
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DriveFileMove
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MarkEmailUnread
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AssistChip
@@ -57,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mailtabs.app.data.db.FolderRole
 import com.mailtabs.app.data.db.MessageEntity
 import com.mailtabs.app.ui.main.Avatar
 import com.mailtabs.app.ui.main.MoveToFolderDialog
@@ -77,6 +79,7 @@ fun MessageScreen(
     onBack: () -> Unit,
     onReply: (accountId: Long, messageId: Long, all: Boolean) -> Unit,
     onForward: (accountId: Long, messageId: Long) -> Unit,
+    onEditDraft: (accountId: Long, messageId: Long) -> Unit,
     vm: MessageViewModel = hiltViewModel(),
 ) {
     val message by vm.message.collectAsStateWithLifecycle()
@@ -117,6 +120,11 @@ fun MessageScreen(
                 actions = {
                     val m = message
                     if (m != null) {
+                        if (folders.firstOrNull { it.fullName == m.folder }?.role == FolderRole.DRAFTS) {
+                            IconButton(onClick = { onEditDraft(m.accountId, m.id) }) {
+                                Icon(Icons.Default.Edit, stringResource(R.string.edit_draft))
+                            }
+                        }
                         StarToggle(
                             flagged = m.flagged,
                             onToggle = vm::toggleFlagged,
