@@ -64,9 +64,19 @@ class MimeComposerTest {
         assertTrue(a2.isMimeType("text/plain"))
         assertTrue(txt.contentEquals(a2.inputStream.readBytes()))
 
+        // Заголовки Content-Type как есть в письме.
+        val cyrName = "UTF-8''%D0%9E%D1%82%D1%87%D1%91%D1%82%20%D0%B7%D0%B0%20%D0%BD%D0%BE%D1%8F%D0%B1%D1%80%D1%8C.txt"
+        fun header(p: javax.mail.BodyPart, name: String) = p.getHeader(name).single().replace(Regex("\\s+"), " ")
+        assertTrue(parsed.contentType, parsed.contentType.startsWith("multipart/mixed;"))
+        assertTrue(parsed.contentType, parsed.contentType.contains("boundary="))
+        assertEquals("application/pdf; name=report.pdf", header(a1, "Content-Type"))
+        assertEquals("attachment; filename=report.pdf", header(a1, "Content-Disposition"))
+        assertEquals("base64", header(a2, "Content-Transfer-Encoding"))
+        assertEquals("text/plain; charset=UTF-8; name*=$cyrName", header(a2, "Content-Type"))
+
         // RFC 2231: filename*=UTF-8''... ; не RFC 2047 (=?UTF-8?...?=) внутри параметра.
-        assertTrue(raw, raw.contains("filename*=UTF-8''%D0%9E%D1%82%D1%87%D1%91%D1%82%20"))
-        assertTrue(raw, !raw.contains("filename=\"=?"))
+        assertEquals("attachment; filename*=$cyrName", header(a2, "Content-Disposition"))
+        assertTrue(raw, !Regex("name=\"?=\\?").containsMatchIn(raw))
         assertEquals("Тест вложений", parsed.subject)
     }
 
