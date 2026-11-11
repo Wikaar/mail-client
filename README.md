@@ -4,9 +4,9 @@
 
 Стек: Kotlin, Jetpack Compose, Material 3, Room, DataStore, JavaMail for Android 1.6.7 (javax.mail, IMAP/SMTP), Hilt, WorkManager. minSdk 26. Без рекламы и аналитики.
 
-WikarM@il 1.2
+## WikarM@il 1.2
 
-WikarM@il — почтовый клиент для Android, в котором каждый ящик живёт в своей вкладке.
+## WikarM@il — почтовый клиент для Android, в котором каждый ящик живёт в своей вкладке.
 
 Что нового в 1.2
 Исправлены пустые папки. Письма теперь корректно загружаются во всех IMAP-папках, включая вложенные и архивные. Ошибка в одном письме больше не прерывает загрузку всей папки.
@@ -22,9 +22,9 @@ WikarM@il — почтовый клиент для Android, в котором к
 Настройки: тема оформления, язык приложения (русский, английский, немецкий), уведомления.
 🇬🇧 WikarM@il 1.2
 
-WikarM@il is an Android mail client where every mailbox lives in its own tab.
+## WikarM@il is an Android mail client where every mailbox lives in its own tab.
 
-What’s new in 1.2
+## What’s new in 1.2
 Empty folders fixed. Messages now load correctly in all IMAP folders, including nested and archive folders. A single malformed message no longer stops the whole folder from loading.
 Attachments. Attach one or more files to a new message, with no storage permission required. The files appear below the message body with their size and a remove button, and you get a warning if the total exceeds 20 MB. Non-Latin file names are sent correctly. Attachments are saved with drafts, and original attachments are included automatically when forwarding.
 New icon: a metallic envelope with a W. Themed icons on Android 13+ are supported.
