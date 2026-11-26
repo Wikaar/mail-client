@@ -3,6 +3,7 @@ package com.mailtabs.app.di
 import android.content.Context
 import androidx.room.Room
 import com.mailtabs.app.data.db.AppDatabase
+import com.mailtabs.app.data.notes.NotesDatabase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -19,4 +20,10 @@ object AppModule {
         Room.databaseBuilder(context, AppDatabase::class.java, "mail.db")
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
+
+    /** Заметки календаря — отдельный файл, почтовая база не затрагивается. */
+    @Provides
+    @Singleton
+    fun notesDatabase(@ApplicationContext context: Context): NotesDatabase =
+        Room.databaseBuilder(context, NotesDatabase::class.java, "notes.db").build()
 }

@@ -195,4 +195,38 @@
     <string name="err_save_draft">Entwurf konnte nicht gespeichert werden: %1$s</string>
     <string name="err_no_drafts_folder">Das Konto hat keinen Entwürfe-Ordner</string>
     <string name="exit_without_saving">Verwerfen</string>
+
+    <!-- Redesign: Navigation, Kalender, Sonstiges -->
+    <string name="tab_mail">Mail</string>
+    <string name="tab_calendar">Kalender</string>
+    <string name="calendar_prev_month">Vorheriger Monat</string>
+    <string name="calendar_next_month">Nächster Monat</string>
+    <string name="calendar_today">Heute</string>
+    <string name="note_add">Notiz</string>
+    <string name="notes_empty_title">Keine Notizen für diesen Tag</string>
+    <string name="notes_empty_text">Tippe auf „Notiz“, um eine Erinnerung, einen Plan oder eine Idee hinzuzufügen.</string>
+    <string name="note_new">Neue Notiz</string>
+    <string name="note_edit">Notiz bearbeiten</string>
+    <string name="note_title">Titel</string>
+    <string name="note_text">Notiz</string>
+    <string name="note_add_time">Uhrzeit hinzufügen</string>
+    <string name="note_remove_time">Uhrzeit entfernen</string>
+    <string name="note_delete_title">Notiz löschen?</string>
+    <string name="note_delete_text">Die Notiz wird von diesem Gerät gelöscht.</string>
+    <string name="save">Speichern</string>
+    <string name="ok">OK</string>
+    <string name="close">Schließen</string>
+    <string name="no_messages_hint">Nach unten ziehen, um neue Mails abzurufen.</string>
+    <string name="mark_read">Als gelesen markieren</string>
+    <string name="folders_custom">Meine Ordner</string>
+    <string name="restore_to_inbox">In den Posteingang verschieben</string>
+    <string name="show_images_hint">Externe Bilder sind zum Schutz deiner Privatsphäre blockiert.</string>
+    <string name="show_details">Details anzeigen</string>
+    <string name="hide_details">Details ausblenden</string>
+    <string name="download">Herunterladen</string>
+    <string name="section_account">Konto</string>
+    <string name="show_password">Passwort anzeigen</string>
+    <string name="hide_password">Passwort verbergen</string>
+    <string name="test_connection">Testen</string>
+    <string name="connection_ok">Die Verbindung zu IMAP und SMTP funktioniert.</string>
 </resources>

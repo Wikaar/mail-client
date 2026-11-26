@@ -14,8 +14,8 @@ android {
         applicationId = "com.mailtabs.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.2.1"
+        versionCode = 5
+        versionName = "1.3.0"
     }
 
     // Постоянный debug-ключ в репозитории: CI-сборки ставятся поверх друг друга.

@@ -199,4 +199,38 @@
     <string name="err_save_draft">Не удалось сохранить черновик: %1$s</string>
     <string name="err_no_drafts_folder">У ящика нет папки «Черновики»</string>
     <string name="exit_without_saving">Не сохранять</string>
+
+    <!-- Редизайн: навигация, календарь, прочее -->
+    <string name="tab_mail">Почта</string>
+    <string name="tab_calendar">Календарь</string>
+    <string name="calendar_prev_month">Предыдущий месяц</string>
+    <string name="calendar_next_month">Следующий месяц</string>
+    <string name="calendar_today">Сегодня</string>
+    <string name="note_add">Заметка</string>
+    <string name="notes_empty_title">На этот день заметок нет</string>
+    <string name="notes_empty_text">Нажмите «Заметка», чтобы добавить напоминание, план или идею.</string>
+    <string name="note_new">Новая заметка</string>
+    <string name="note_edit">Заметка</string>
+    <string name="note_title">Заголовок</string>
+    <string name="note_text">Текст</string>
+    <string name="note_add_time">Добавить время</string>
+    <string name="note_remove_time">Убрать время</string>
+    <string name="note_delete_title">Удалить заметку?</string>
+    <string name="note_delete_text">Заметка будет удалена с этого устройства.</string>
+    <string name="save">Сохранить</string>
+    <string name="ok">ОК</string>
+    <string name="close">Закрыть</string>
+    <string name="no_messages_hint">Потяните вниз, чтобы проверить почту.</string>
+    <string name="mark_read">Пометить прочитанным</string>
+    <string name="folders_custom">Мои папки</string>
+    <string name="restore_to_inbox">Вернуть во Входящие</string>
+    <string name="show_images_hint">Внешние картинки заблокированы ради приватности.</string>
+    <string name="show_details">Показать подробности</string>
+    <string name="hide_details">Скрыть подробности</string>
+    <string name="download">Скачать</string>
+    <string name="section_account">Учётная запись</string>
+    <string name="show_password">Показать пароль</string>
+    <string name="hide_password">Скрыть пароль</string>
+    <string name="test_connection">Проверить</string>
+    <string name="connection_ok">Подключение к IMAP и SMTP работает.</string>
 </resources>

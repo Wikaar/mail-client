@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- AppCompat DayNight: тема приложения переключается через AppCompatDelegate.setDefaultNightMode. -->
-    <style name="Theme.MailTabs" parent="Theme.AppCompat.DayNight.NoActionBar" />
+    <style name="Theme.MailTabs" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <!-- Фон окна в цвет Midnight Violet: без белой/чёрной вспышки до первого кадра Compose. -->
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
 </resources>

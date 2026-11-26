@@ -105,7 +105,14 @@ class AccountEditViewModel @Inject constructor(
         )
     }
 
-    fun save() {
+    /** Результат «Проверить подключение»: null — не проверяли. */
+    var testOk by mutableStateOf<Boolean?>(null)
+        private set
+    var testing by mutableStateOf(false)
+        private set
+
+    /** Проверка полей; при ошибке заполняет [error] и возвращает null. */
+    private fun buildDraft(requirePassword: Boolean): AccountEntity? {
         val f = form
         val imapPort = f.imapPort.toIntOrNull()
         val smtpPort = f.smtpPort.toIntOrNull()
@@ -113,11 +120,11 @@ class AccountEditViewModel @Inject constructor(
             f.email.isBlank() || !f.email.contains('@') -> strings.get(R.string.err_enter_email)
             f.imapHost.isBlank() || imapPort == null -> strings.get(R.string.err_enter_imap)
             f.smtpHost.isBlank() || smtpPort == null -> strings.get(R.string.err_enter_smtp)
-            !isEdit && f.password.isEmpty() -> strings.get(R.string.err_enter_password)
+            requirePassword && !isEdit && f.password.isEmpty() -> strings.get(R.string.err_enter_password)
             else -> null
         }
-        if (error != null || imapPort == null || smtpPort == null) return
-        val draft = AccountEntity(
+        if (error != null || imapPort == null || smtpPort == null) return null
+        return AccountEntity(
             id = if (isEdit) editId else 0,
             name = f.name.ifBlank { f.email },
             email = f.email.trim(),
@@ -128,6 +135,38 @@ class AccountEditViewModel @Inject constructor(
             encryptedPassword = "",
             saveSentCopy = f.saveSentCopy,
         )
+    }
+
+    /** Только проверка IMAP и SMTP, без сохранения (тот же testConnection, что и при сохранении). */
+    fun test() {
+        if (testing || saving) return
+        val draft = buildDraft(requirePassword = true) ?: return
+        val typed = form.password
+        testing = true
+        testOk = null
+        viewModelScope.launch {
+            try {
+                val password = typed.ifEmpty {
+                    repo.getAccount(editId)?.let { repo.password(it) }
+                        ?: throw IllegalStateException(strings.get(R.string.err_enter_password))
+                }
+                repo.testConnection(draft, password)
+                testOk = true
+            } catch (e: Exception) {
+                testOk = false
+                error = e.message ?: e.toString()
+            } finally {
+                testing = false
+            }
+        }
+    }
+
+    /** Поля изменились — прежний результат проверки уже не актуален. */
+    fun resetTest() { testOk = null }
+
+    fun save() {
+        val f = form
+        val draft = buildDraft(requirePassword = true) ?: return
         saving = true
         viewModelScope.launch {
             try {

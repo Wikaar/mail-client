@@ -12,6 +12,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -28,13 +30,11 @@ import androidx.compose.material.icons.filled.Attachment
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MarkEmailRead
 import androidx.compose.material.icons.filled.MarkEmailUnread
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.outlined.Inbox
+import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
@@ -66,6 +66,9 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -73,6 +76,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mailtabs.app.R
 import com.mailtabs.app.data.db.FolderEntity
 import com.mailtabs.app.data.db.MessageListItem
+import com.mailtabs.app.ui.components.Avatar
+import com.mailtabs.app.ui.components.EmptyState
+import com.mailtabs.app.ui.components.StarToggle
+import com.mailtabs.app.ui.theme.CardShape
+import com.mailtabs.app.ui.theme.Wikar
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -82,7 +90,6 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
 import kotlin.math.abs
-import kotlin.math.absoluteValue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -113,30 +120,32 @@ fun AccountPage(
         isRefreshing = refreshing,
         onRefresh = vm::refresh,
         modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter,
     ) {
-        LazyColumn(Modifier.fillMaxSize()) {
+        LazyColumn(
+            Modifier.widthIn(max = Wikar.dimens.maxContentWidth).fillMaxSize(),
+            // Снизу — место под FAB, чтобы он не закрывал последнее письмо.
+            contentPadding = PaddingValues(top = 4.dp, bottom = 96.dp),
+        ) {
             if (messages.isEmpty()) {
                 item(key = "empty") {
-                    Box(
-                        Modifier.fillMaxWidth().padding(48.dp).animateItem(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            stringResource(
-                                when {
-                                    refreshing -> R.string.loading
-                                    onlyFlagged -> R.string.no_important_messages
-                                    else -> R.string.no_messages
-                                }
-                            ),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                    EmptyState(
+                        icon = if (onlyFlagged) Icons.Outlined.StarOutline else Icons.Outlined.Inbox,
+                        title = stringResource(
+                            when {
+                                refreshing -> R.string.loading
+                                onlyFlagged -> R.string.no_important_messages
+                                else -> R.string.no_messages
+                            }
+                        ),
+                        text = if (refreshing) null else stringResource(R.string.no_messages_hint),
+                        modifier = Modifier.animateItem(),
+                    )
                 }
             }
             items(messages, key = { it.id }) { m ->
                 // Удалённая строка плавно исчезает, соседние плавно съезжают; «Отменить» возвращает её с fade-in.
-                Column(
+                Box(
                     Modifier.animateItem(
                         fadeInSpec = tween(durationMillis = 280),
                         placementSpec = spring(stiffness = Spring.StiffnessMediumLow),
@@ -167,7 +176,6 @@ fun AccountPage(
                             }
                         },
                     )
-                    HorizontalDivider()
                 }
             }
         }
@@ -226,9 +234,23 @@ private fun SwipeableMessageRow(
         },
         positionalThreshold = { it * SWIPE_THRESHOLD },
     )
+    // TalkBack: действия свайпов доступны как пользовательские действия.
+    val readLabel = stringResource(if (m.seen) R.string.mark_unread else R.string.mark_read)
+    val deleteLabel = stringResource(R.string.delete)
+    val ext = Wikar.colors
+    val scheme = MaterialTheme.colorScheme
     SwipeToDismissBox(
         state = state,
-        modifier = Modifier.onSizeChanged { width = it.width },
+        modifier = Modifier
+            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .clip(CardShape)
+            .onSizeChanged { width = it.width }
+            .semantics {
+                customActions = listOf(
+                    CustomAccessibilityAction(readLabel) { toggle(); true },
+                    CustomAccessibilityAction(deleteLabel) { delete(); true },
+                )
+            },
         backgroundContent = {
             val offset = state.offsetOrZero()
             val fraction = if (width > 0) (abs(offset) / width).coerceIn(0f, 1f) else 0f
@@ -245,9 +267,9 @@ private fun SwipeableMessageRow(
             // Фон проявляется по мере свайпа и становится полностью непрозрачным у порога.
             val reveal = (fraction / SWIPE_THRESHOLD).coerceIn(0f, 1f)
             val (color, icon, align) = when {
-                offset < 0f -> Triple(Color(0xFFD32F2F), Icons.Default.Delete, Alignment.CenterEnd)
+                offset < 0f -> Triple(ext.swipeDelete, Icons.Default.Delete, Alignment.CenterEnd)
                 offset > 0f -> Triple(
-                    MaterialTheme.colorScheme.primary,
+                    scheme.primaryContainer,
                     if (m.seen) Icons.Default.MarkEmailUnread else Icons.Default.MarkEmailRead,
                     Alignment.CenterStart,
                 )
@@ -264,7 +286,7 @@ private fun SwipeableMessageRow(
                     Icon(
                         icon,
                         contentDescription = null,
-                        tint = if (offset < 0f) Color.White else MaterialTheme.colorScheme.onPrimary,
+                        tint = if (offset < 0f) ext.onSwipeDelete else scheme.onPrimaryContainer,
                         modifier = Modifier.graphicsLayer {
                             scaleX = iconScale
                             scaleY = iconScale
@@ -285,29 +307,38 @@ private fun SwipeableMessageRow(
 private fun SwipeToDismissBoxState.offsetOrZero(): Float =
     runCatching { requireOffset() }.getOrDefault(0f).let { if (it.isNaN()) 0f else it }
 
+/** Строка письма, плотность Comfortable: аватар, отправитель + время, тема, превью в 2 строки. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MessageRow(m: MessageListItem, onClick: () -> Unit, onLongClick: () -> Unit, onToggleFlag: () -> Unit) {
     val unread = !m.seen
     val name = m.fromName.ifBlank { m.fromAddress }.ifBlank { stringResource(R.string.no_sender) }
     val locale = currentLocale()
+    val scheme = MaterialTheme.colorScheme
     Row(
         Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
+            .heightIn(min = 88.dp)
+            // Непрочитанные — чуть более светлая карточка; цвет не единственный признак (ещё точка и жирный шрифт).
+            .background(if (unread) scheme.surfaceContainerHigh else scheme.surfaceContainer)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 8.dp),
+            .padding(start = 14.dp, end = 4.dp, top = 14.dp, bottom = 6.dp),
         verticalAlignment = Alignment.Top,
     ) {
         Avatar(name, m.fromAddress)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if (unread) {
+                    Box(Modifier.size(8.dp).clip(CircleShape).background(scheme.primary))
+                    Spacer(Modifier.width(6.dp))
+                }
                 Text(
                     name,
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = if (unread) FontWeight.Bold else FontWeight.Normal,
+                    fontWeight = if (unread) FontWeight.Bold else FontWeight.Medium,
+                    color = if (unread) scheme.onSurface else scheme.onSurface.copy(alpha = 0.85f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -315,80 +346,40 @@ private fun MessageRow(m: MessageListItem, onClick: () -> Unit, onLongClick: () 
                     Icon(
                         Icons.Default.Attachment, contentDescription = stringResource(R.string.attachments),
                         modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = scheme.onSurfaceVariant,
                     )
-                    Spacer(Modifier.width(4.dp))
+                    Spacer(Modifier.width(6.dp))
                 }
                 Text(
                     formatTime(m.date, locale),
-                    modifier = Modifier.padding(end = 8.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = if (unread) FontWeight.Bold else FontWeight.Normal,
-                    color = if (unread) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(end = 10.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = if (unread) FontWeight.SemiBold else FontWeight.Normal,
+                    color = if (unread) scheme.primary else scheme.onSurfaceVariant,
                 )
             }
+            Spacer(Modifier.size(2.dp))
             Text(
                 m.subject.ifBlank { stringResource(R.string.no_subject) },
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = if (unread) FontWeight.Bold else FontWeight.Normal,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = if (unread) FontWeight.SemiBold else FontWeight.Normal,
+                color = if (unread) scheme.onSurface else scheme.onSurface.copy(alpha = 0.85f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(end = 10.dp),
             )
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.Top) {
                 Text(
                     m.preview,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).padding(top = 2.dp),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
+                    color = scheme.onSurfaceVariant,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                StarToggle(flagged = m.flagged, onToggle = onToggleFlag)
+                StarToggle(flagged = m.flagged, onToggle = onToggleFlag, modifier = Modifier.padding(top = 0.dp))
             }
         }
-    }
-}
-
-val StarColor = Color(0xFFF9A825)
-
-/** Звёздочка «Важное»: тап переключает флаг \Flagged. */
-@Composable
-fun StarToggle(flagged: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier) {
-    val scale by animateFloatAsState(
-        targetValue = if (flagged) 1.15f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioHighBouncy, stiffness = Spring.StiffnessMedium),
-        label = "starScale",
-    )
-    Box(
-        modifier
-            .size(36.dp)
-            .clip(CircleShape)
-            .clickable(onClick = onToggle),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            if (flagged) Icons.Default.Star else Icons.Default.StarBorder,
-            contentDescription = stringResource(if (flagged) R.string.unmark_important else R.string.mark_important),
-            tint = if (flagged) StarColor else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(22.dp).graphicsLayer { scaleX = scale; scaleY = scale },
-        )
-    }
-}
-
-private val avatarColors = listOf(
-    Color(0xFF1E88E5), Color(0xFF43A047), Color(0xFFE53935), Color(0xFF8E24AA),
-    Color(0xFFF4511E), Color(0xFF00897B), Color(0xFF3949AB), Color(0xFF6D4C41),
-)
-
-@Composable
-fun Avatar(name: String, address: String, size: Int = 40) {
-    val letter = name.firstOrNull { it.isLetterOrDigit() }?.uppercaseChar() ?: '?'
-    val color = avatarColors[(address.ifBlank { name }.lowercase().hashCode().absoluteValue) % avatarColors.size]
-    Box(
-        Modifier.size(size.dp).clip(CircleShape).background(color),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(letter.toString(), color = Color.White, style = MaterialTheme.typography.titleMedium)
     }
 }
 
@@ -419,15 +410,21 @@ fun MoveToFolderDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.move_to_folder)) },
         text = {
-            LazyColumn(Modifier.heightIn(max = 420.dp), verticalArrangement = Arrangement.spacedBy(0.dp)) {
+            LazyColumn(Modifier.heightIn(max = 420.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 items(folders, key = { it.fullName }) { f ->
-                    ListItem(
-                        headlineContent = { Text(folderTitle(f, f.fullName)) },
-                        leadingContent = { Icon(folderIcon(f), null) },
-                        modifier = Modifier
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(CardShape)
                             .clickable { onPick(f.fullName) }
-                            .padding(start = (f.depth * 12).dp),
-                    )
+                            .heightIn(min = 48.dp)
+                            .padding(start = (12 + f.depth * 16).dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(folderIcon(f), null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(16.dp))
+                        Text(folderTitle(f, f.fullName), style = MaterialTheme.typography.bodyLarge)
+                    }
                 }
             }
         },

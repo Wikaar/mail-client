@@ -18,7 +18,6 @@ import androidx.compose.material.icons.filled.ManageAccounts
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.Send
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -44,6 +43,19 @@ import com.mailtabs.app.R
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mailtabs.app.data.db.FolderEntity
 import com.mailtabs.app.data.db.FolderRole
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.NavigationDrawerItemDefaults
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import com.mailtabs.app.ui.components.Avatar
+import com.mailtabs.app.ui.components.CountPill
+import com.mailtabs.app.ui.components.SectionLabel
+import com.mailtabs.app.ui.theme.InputShape
+import com.mailtabs.app.ui.theme.Wikar
 
 fun folderIcon(f: FolderEntity): ImageVector = when (f.role) {
     FolderRole.INBOX -> Icons.Default.Inbox
@@ -61,26 +73,44 @@ private sealed interface FolderDialog {
     data class Delete(val folder: FolderEntity) : FolderDialog
 }
 
-/** Папки ТЕКУЩЕГО ящика, загруженные с сервера (IMAP LIST). */
+/** Папки ТЕКУЩЕГО ящика, загруженные с сервера (IMAP LIST): сначала системные, затем свои. */
 @Composable
 fun FolderDrawer(
     accountName: String,
     vm: AccountViewModel,
     onSelect: (String) -> Unit,
     onManageAccounts: () -> Unit,
-    onSettings: () -> Unit,
 ) {
     val folders by vm.folders.collectAsStateWithLifecycle()
     val current by vm.folderName.collectAsStateWithLifecycle()
     var dialog by remember { mutableStateOf<FolderDialog?>(null) }
+    val system = folders.filter { it.role != FolderRole.OTHER }
+    val custom = folders.filter { it.role == FolderRole.OTHER }
 
     Column(Modifier.fillMaxWidth()) {
-        Text(
-            accountName,
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(horizontal = 28.dp, vertical = 20.dp),
-        )
-        LazyColumn(Modifier.weight(1f)) {
+        // Шапка: бренд и текущий ящик.
+        Row(
+            Modifier.fillMaxWidth().padding(start = 24.dp, end = 16.dp, top = 24.dp, bottom = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Avatar(accountName, accountName, size = 44.dp)
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    accountName,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        HorizontalDivider(Modifier.padding(horizontal = 24.dp), color = Wikar.colors.divider)
+        LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(vertical = 8.dp)) {
             if (folders.isEmpty()) {
                 item {
                     Text(
@@ -90,7 +120,20 @@ fun FolderDrawer(
                     )
                 }
             }
-            items(folders, key = { it.fullName }) { f ->
+            items(system, key = { it.fullName }) { f ->
+                FolderItem(
+                    f = f,
+                    selected = f.fullName == current,
+                    onClick = { if (f.selectable) onSelect(f.fullName) },
+                    onCreateSub = { dialog = FolderDialog.Create(f.fullName) },
+                    onRename = { dialog = FolderDialog.Rename(f) },
+                    onDelete = { dialog = FolderDialog.Delete(f) },
+                )
+            }
+            if (custom.isNotEmpty()) {
+                item(key = "custom_header") { SectionLabel(stringResource(R.string.folders_custom)) }
+            }
+            items(custom, key = { it.fullName }) { f ->
                 FolderItem(
                     f = f,
                     selected = f.fullName == current,
@@ -101,27 +144,20 @@ fun FolderDrawer(
                 )
             }
         }
-        HorizontalDivider()
+        HorizontalDivider(Modifier.padding(horizontal = 24.dp), color = Wikar.colors.divider)
         NavigationDrawerItem(
             label = { Text(stringResource(R.string.new_folder)) },
             icon = { Icon(Icons.Default.CreateNewFolder, null) },
             selected = false,
             onClick = { dialog = FolderDialog.Create(null) },
-            modifier = Modifier.padding(horizontal = 12.dp),
+            modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp),
         )
         NavigationDrawerItem(
             label = { Text(stringResource(R.string.accounts_title)) },
             icon = { Icon(Icons.Default.ManageAccounts, null) },
             selected = false,
             onClick = onManageAccounts,
-            modifier = Modifier.padding(horizontal = 12.dp),
-        )
-        NavigationDrawerItem(
-            label = { Text(stringResource(R.string.settings_title)) },
-            icon = { Icon(Icons.Default.Settings, null) },
-            selected = false,
-            onClick = onSettings,
-            modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
+            modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
         )
     }
 
@@ -142,10 +178,13 @@ fun FolderDrawer(
         )
         is FolderDialog.Delete -> AlertDialog(
             onDismissRequest = { dialog = null },
+            icon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
             title = { Text(stringResource(R.string.delete_folder_title)) },
             text = { Text(stringResource(R.string.delete_folder_text, d.folder.fullName)) },
             confirmButton = {
-                TextButton(onClick = { vm.deleteFolder(d.folder.fullName); dialog = null }) { Text(stringResource(R.string.delete)) }
+                TextButton(onClick = { vm.deleteFolder(d.folder.fullName); dialog = null }) {
+                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
+                }
             },
             dismissButton = { TextButton(onClick = { dialog = null }) { Text(stringResource(R.string.cancel)) } },
         )
@@ -168,8 +207,10 @@ private fun FolderItem(
         label = {
             Text(
                 folderTitle(f, f.fullName),
-                color = if (f.selectable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (f.selectable) LocalContentColor.current else MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = if (selected || f.unread > 0) FontWeight.SemiBold else FontWeight.Normal,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         },
         icon = { Icon(folderIcon(f), null) },
@@ -177,19 +218,28 @@ private fun FolderItem(
         onClick = onClick,
         badge = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (f.unread > 0) Text(f.unread.toString(), style = MaterialTheme.typography.labelLarge)
+                CountPill(f.unread, selected = selected)
                 if (custom) {
                     Box {
                         IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, stringResource(R.string.folder_actions)) }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                             DropdownMenuItem(text = { Text(stringResource(R.string.create_subfolder)) }, onClick = { menu = false; onCreateSub() })
                             DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, onClick = { menu = false; onRename() })
-                            DropdownMenuItem(text = { Text(stringResource(R.string.delete)) }, onClick = { menu = false; onDelete() })
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) },
+                                onClick = { menu = false; onDelete() },
+                            )
                         }
                     }
                 }
             }
         },
+        colors = NavigationDrawerItemDefaults.colors(
+            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+            selectedIconColor = MaterialTheme.colorScheme.primary,
+            selectedTextColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            unselectedContainerColor = Color.Transparent,
+        ),
         modifier = Modifier.padding(start = (12 + f.depth * 16).dp, end = 12.dp),
     )
 }
@@ -207,7 +257,11 @@ fun TextInputDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            OutlinedTextField(value = text, onValueChange = { text = it }, singleLine = true, label = { Text(stringResource(R.string.name)) })
+            OutlinedTextField(
+                value = text, onValueChange = { text = it }, singleLine = true,
+                label = { Text(stringResource(R.string.name)) },
+                shape = InputShape,
+            )
         },
         confirmButton = {
             TextButton(enabled = text.isNotBlank(), onClick = { onConfirm(text.trim()) }) { Text(confirm) }
